@@ -1,23 +1,23 @@
-import { useState, useRef } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
+import { Star, X } from "lucide-react-native";
+import { useRef, useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  FlatList,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../lib/supabase";
-import { Star, X, Plus } from "lucide-react-native";
 
 const BREAD_TYPES = [
   "sourdough",
@@ -41,6 +41,7 @@ interface BakeryResult {
   address: string;
   latitude: number;
   longitude: number;
+  google_place_id: string;
 }
 
 export default function AddReviewScreen() {
@@ -51,6 +52,7 @@ export default function AddReviewScreen() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [breadType, setBreadType] = useState("sourdough");
   const [showBreadTypes, setShowBreadTypes] = useState(false);
   const [ratingOverall, setRatingOverall] = useState(5);
@@ -92,7 +94,7 @@ export default function AddReviewScreen() {
         const formatted: BakeryResult[] = data.results
           .slice(0, 10)
           .map((place: any) => ({
-            place_id: place.place_id,
+            google_place_id: place.place_id,
             name: place.name,
             address: place.formatted_address,
             latitude: place.geometry.location.lat,
@@ -124,6 +126,7 @@ export default function AddReviewScreen() {
     setBakeryName(bakery.name);
     setBakeryAddress(bakery.address);
     setBakeryCoordinates({ lat: bakery.latitude, lng: bakery.longitude });
+    setGooglePlaceId(bakery.google_place_id);
     setShowBakerySearch(false);
     setBakerySearchQuery("");
     setBakeryResults([]);
@@ -142,6 +145,7 @@ export default function AddReviewScreen() {
     setBakeryName(manualBakeryName);
     setBakeryAddress(manualBakeryAddress);
     setBakeryCoordinates(null); // Will use default coordinates
+    setGooglePlaceId(null);
     setShowManualBakery(false);
     setManualBakeryName("");
     setManualBakeryAddress("");
@@ -263,6 +267,7 @@ export default function AddReviewScreen() {
             address: bakeryAddress || "Unknown",
             latitude: bakeryCoordinates?.lat || 37.7749,
             longitude: bakeryCoordinates?.lng || -122.4194,
+            google_place_id: googlePlaceId || null,
           })
           .select()
           .single();
@@ -297,6 +302,7 @@ export default function AddReviewScreen() {
             setBakeryName("");
             setBakeryAddress("");
             setBakeryCoordinates(null);
+            setGooglePlaceId(null);
             setBreadType("sourdough");
             setRatingOverall(5);
             setRatingCrust(5);
