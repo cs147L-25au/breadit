@@ -1,11 +1,12 @@
-import { MapPin, Star } from 'lucide-react-native';
+import { Star } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 
 const bakeries = [
-  { id: '1', name: 'Tartine Bakery', rating: 4.8 },
-  { id: '2', name: 'La Boulangerie', rating: 4.5 },
-  { id: '3', name: 'Acme Bread', rating: 4.9 },
+  { id: '1', name: 'Tartine Bakery', rating: 4.8, latitude: 37.7599, longitude: -122.4148 },
+  { id: '2', name: 'La Boulangerie', rating: 4.5, latitude: 37.7620, longitude: -122.4100 },
+  { id: '3', name: 'Acme Bread', rating: 4.9, latitude: 37.7580, longitude: -122.4180 },
 ];
 
 export default function MapScreen() {
@@ -13,11 +14,25 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.mapPlaceholder}>
-        <MapPin size={64} color="#d97706" />
-        <Text style={styles.placeholderText}>Map view coming soon</Text>
-        <Text style={styles.placeholderSubtext}>Will use react-native-maps</Text>
-      </View>
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: 37.7599,
+          longitude: -122.4148,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+      >
+        {bakeries.map(bakery => (
+          <Marker
+            key={bakery.id}
+            coordinate={{ latitude: bakery.latitude, longitude: bakery.longitude }}
+            title={bakery.name}
+            description={`Rating: ${bakery.rating}`}
+            onPress={() => setSelectedBakery(bakery)}
+          />
+        ))}
+      </MapView>
 
       <View style={styles.bakeryList}>
         <Text style={styles.listTitle}>Nearby Bakeries</Text>
@@ -25,7 +40,10 @@ export default function MapScreen() {
           <TouchableOpacity
             key={bakery.id}
             onPress={() => setSelectedBakery(bakery)}
-            style={styles.bakeryItem}
+            style={[
+              styles.bakeryItem,
+              selectedBakery?.id === bakery.id && styles.selectedItem,
+            ]}
           >
             <Text style={styles.bakeryName}>{bakery.name}</Text>
             <View style={styles.ratingContainer}>
@@ -44,20 +62,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
-  mapPlaceholder: {
+  map: {
     flex: 1,
-    backgroundColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: '#6b7280',
-  },
-  placeholderSubtext: {
-    marginTop: 8,
-    color: '#9ca3af',
   },
   bakeryList: {
     padding: 16,
@@ -76,6 +82,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  selectedItem: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#f59e0b',
+    borderWidth: 1,
   },
   bakeryName: {
     fontSize: 16,
