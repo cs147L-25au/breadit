@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import MapView, { Region } from 'react-native-maps';
 
+import * as Location from 'expo-location';
 import { BakeryCard, BakeryDetailsModal, BakeryMarker } from '../../components/map';
 import { useBakeries } from '../../hooks/use-bakeries';
 import { BakeryWithReviews } from '../../lib/database.types';
@@ -18,6 +19,19 @@ export default function MapScreen() {
   const [selectedBakery, setSelectedBakery] = useState<BakeryWithReviews | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const mapRef = useRef<MapView>(null);
+  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({});
+        setLocation(loc.coords);
+      }
+    })();
+  }, []);
+
 
   const handleMarkerPress = (bakery: BakeryWithReviews) => {
     setSelectedBakery(bakery);
@@ -86,7 +100,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView ref={mapRef} style={styles.map} initialRegion={getInitialRegion()}>
+      <MapView showsUserLocation={true} ref={mapRef} style={styles.map} initialRegion={getInitialRegion()}>
         {bakeries.map((bakery) => (
           <BakeryMarker key={bakery.id} bakery={bakery} onPress={handleMarkerPress} />
         ))}
