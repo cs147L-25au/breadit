@@ -56,7 +56,6 @@ export default function ProfileScreen() {
         setLoading(false);
         return;
       }
-
       // Load profile
       const { data: profileData } = await supabase
         .from('profiles')

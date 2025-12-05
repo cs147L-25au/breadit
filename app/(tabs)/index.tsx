@@ -146,6 +146,8 @@ export default function FeedScreen() {
 
           return {
             ...review,
+            profiles: Array.isArray(review.profiles) ? review.profiles[0] : review.profiles,
+            bakeries: Array.isArray(review.bakeries) ? review.bakeries[0] : review.bakeries,
             likes_count: likesCount || 0,
             comments_count: commentsCount || 0,
             user_has_liked: userHasLiked,
@@ -153,7 +155,7 @@ export default function FeedScreen() {
         })
       );
 
-      setReviews(reviewsWithCounts);
+      setReviews(reviewsWithCounts as Review[]);
     } catch (error) {
       console.error("Error loading reviews:", error);
       Alert.alert("Error", "Failed to load reviews");
@@ -232,7 +234,10 @@ export default function FeedScreen() {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setComments(data || []);
+      setComments(data?.map((comment) => ({
+        ...comment,
+        profiles: comment.profiles[0],
+      })) || []);
     } catch (error) {
       console.error("Error loading comments:", error);
       Alert.alert("Error", "Failed to load comments");
@@ -285,13 +290,15 @@ export default function FeedScreen() {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.userInfo}>
-          <Image
-            source={{
-              uri:
-                item.profiles?.avatar_url || "https://i.pravatar.cc/150?img=1",
-            }}
-            style={styles.avatar}
-          />
+        {item.profiles?.avatar_url ? (
+          <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarInitial}>
+              {item.profiles?.username?.[0]?.toUpperCase() || '?'}
+            </Text>
+          </View>
+        )}
           <View>
             <Text style={styles.userName}>
               {item.profiles?.full_name ||
@@ -774,5 +781,19 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  avatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 36,
+    backgroundColor: '#D97706',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarInitial: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
   },
 });

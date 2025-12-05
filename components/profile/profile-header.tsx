@@ -19,10 +19,15 @@ export function ProfileHeader({
   return (
     <View style={styles.header}>
       <View style={styles.profileSection}>
-        <Image 
-          source={{ uri: profile?.avatar_url || 'https://i.pravatar.cc/150?img=5' }} 
-          style={styles.avatar} 
-        />
+        {profile?.avatar_url ? (
+          <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarInitial}>
+              {profile?.username?.[0]?.toUpperCase() || '?'}
+            </Text>
+          </View>
+        )}
         <View style={styles.profileInfo}>
           <Text style={styles.name}>
             {profile?.full_name || profile?.username || 'Bread Lover'}
@@ -111,6 +116,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     fontWeight: '500',
+  },
+  avatarPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#D97706',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
   },
 });
 
