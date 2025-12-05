@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -42,6 +43,23 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  async function handleLogout() {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.auth.signOut();
+          },
+        },
+      ]
+    );
+  }
 
   async function onRefresh() {
     setRefreshing(true);
@@ -90,7 +108,11 @@ export default function ProfileScreen() {
         .order('created_at', { ascending: false });
 
       if (reviewsData) {
-        setReviews(reviewsData as UserReview[]);
+        const formattedReviews = reviewsData.map((review) => ({
+          ...review,
+          bakeries: Array.isArray(review.bakeries) ? review.bakeries[0] : review.bakeries,
+        }));
+        setReviews(formattedReviews as UserReview[]);
       }
 
       // Load saved places
@@ -173,6 +195,7 @@ export default function ProfileScreen() {
         avgRating={avgRating}
         uniqueBakeries={uniqueBakeries}
         savedCount={savedPlaces.length}
+        onLogout={handleLogout}
       />
 
       <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />

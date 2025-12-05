@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { LogOut } from 'lucide-react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { UserProfile } from './types';
 
 interface ProfileHeaderProps {
@@ -7,6 +8,7 @@ interface ProfileHeaderProps {
   avgRating: string;
   uniqueBakeries: number;
   savedCount: number;
+  onLogout?: () => void;
 }
 
 export function ProfileHeader({
@@ -15,9 +17,15 @@ export function ProfileHeader({
   avgRating,
   uniqueBakeries,
   savedCount,
+  onLogout,
 }: ProfileHeaderProps) {
   return (
     <View style={styles.header}>
+      {onLogout && (
+        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+          <LogOut size={20} color="#6b7280" />
+        </TouchableOpacity>
+      )}
       <View style={styles.profileSection}>
         {profile?.avatar_url ? (
           <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
@@ -71,6 +79,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
   },
   profileSection: {
     flexDirection: 'row',
