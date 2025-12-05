@@ -1,177 +1,280 @@
-import { Star } from 'lucide-react-native';
-import { FlatList, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-const mockUserReviews = [
-  {
-    id: '3',
-    bakeryName: 'Acme Bread Company',
-    breadType: 'Focaccia',
-    rating: 4.9,
-    imageUrl: 'https://images.unsplash.com/photo-1601482441062-b9f13131f33a?w=400',
-  },
-  {
-    id: '4',
-    bakeryName: 'Neighbor Bakehouse',
-    breadType: 'Croissant',
-    rating: 4.7,
-    imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-  },
-];
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from 'react-native';
+import {
+  BREAD_TYPES,
+  EmptyState,
+  FilterBar,
+  FilterModal,
+  formatBreadType,
+  ProfileHeader,
+  ProfileTabs,
+  ReviewCard,
+  SavedPlaceCard,
+  type SavedPlace,
+  type SortOption,
+  type TabType,
+  type UserProfile,
+  type UserReview,
+} from '../../components/profile';
+import { BreadType } from '../../lib/database.types';
+import { supabase } from '../../lib/supabase';
 
 export default function ProfileScreen() {
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.profileSection}>
-          <Image 
-            source={{ uri: 'https://i.pravatar.cc/150?img=5' }} 
-            style={styles.avatar} 
-          />
-          <View style={styles.profileInfo}>
-            <Text style={styles.name}>Alex Johnson</Text>
-            <Text style={styles.bio}>Bread enthusiast 🥖</Text>
-          </View>
-        </View>
-        
-        <View style={styles.stats}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>27</Text>
-            <Text style={styles.statLabel}>Reviews</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>4.6</Text>
-            <Text style={styles.statLabel}>Avg Rating</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>15</Text>
-            <Text style={styles.statLabel}>Bakeries</Text>
-          </View>
-        </View>
-      </View>
+  const [activeTab, setActiveTab] = useState<TabType>('reviews');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [reviews, setReviews] = useState<UserReview[]>([]);
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
+  
+  // Filter & sort state
+  const [selectedBreadType, setSelectedBreadType] = useState<BreadType | 'all'>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [showBreadFilter, setShowBreadFilter] = useState(false);
+  const [showSortOptions, setShowSortOptions] = useState(false);
 
-      <View style={styles.reviewsSection}>
-        <Text style={styles.sectionTitle}>My Reviews</Text>
-        
-        <FlatList
-          data={mockUserReviews}
-          numColumns={2}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <View style={styles.reviewCard}>
-              <Image source={{ uri: item.imageUrl }} style={styles.reviewImage} />
-              <View style={styles.reviewInfo}>
-                <Text style={styles.reviewBakery} numberOfLines={1}>
-                  {item.bakeryName}
-                </Text>
-                <Text style={styles.reviewBreadType}>{item.breadType}</Text>
-                <View style={styles.reviewRating}>
-                  <Star size={12} fill="#f59e0b" color="#f59e0b" />
-                  <Text style={styles.reviewRatingText}>{item.rating}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-          keyExtractor={item => item.id}
-        />
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadUserData();
+    setRefreshing(false);
+  }
+
+  async function loadUserData() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Load profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+
+      // Load user's reviews
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select(`
+          id,
+          bread_type,
+          rating_overall,
+          rating_crust,
+          rating_crumb,
+          rating_flavor,
+          review_text,
+          image_url,
+          created_at,
+          bakeries (
+            id,
+            name,
+            address
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (reviewsData) {
+        setReviews(reviewsData as UserReview[]);
+      }
+
+      // Load saved places
+      const { data: savedData } = await supabase
+        .from('saved')
+        .select(`
+          id,
+          created_at,
+          bakeries:bakery (
+            id,
+            name,
+            address,
+            latitude,
+            longitude
+          )
+        `)
+        .eq('user', user.id)
+        .order('created_at', { ascending: false });
+
+      if (savedData) {
+        setSavedPlaces(savedData as unknown as SavedPlace[]);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Filter and sort reviews
+  const filteredReviews = reviews
+    .filter(review => selectedBreadType === 'all' || review.bread_type === selectedBreadType)
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'highest':
+          return b.rating_overall - a.rating_overall;
+        case 'lowest':
+          return a.rating_overall - b.rating_overall;
+        case 'newest':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+  // Calculate stats
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating_overall, 0) / reviews.length).toFixed(1)
+    : '0.0';
+  
+  const uniqueBakeries = new Set(reviews.map(r => r.bakeries?.id)).size;
+
+  // Filter options
+  const breadTypeOptions = BREAD_TYPES.map(type => ({
+    value: type,
+    label: type === 'all' ? 'All Types' : formatBreadType(type),
+  }));
+
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'newest', label: 'Newest First' },
+    { value: 'highest', label: 'Highest Rated' },
+    { value: 'lowest', label: 'Lowest Rated' },
+  ];
+
+  const breadTypeLabel = selectedBreadType === 'all' ? 'All Types' : formatBreadType(selectedBreadType);
+  const sortLabel = sortBy === 'newest' ? 'Newest' : sortBy === 'highest' ? 'Highest Rated' : 'Lowest Rated';
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#d97706" />
       </View>
-    </ScrollView>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ProfileHeader
+        profile={profile}
+        reviewCount={reviews.length}
+        avgRating={avgRating}
+        uniqueBakeries={uniqueBakeries}
+        savedCount={savedPlaces.length}
+      />
+
+      <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {activeTab === 'reviews' && (
+        <>
+          <FilterBar
+            breadTypeLabel={breadTypeLabel}
+            sortLabel={sortLabel}
+            onBreadTypePress={() => setShowBreadFilter(true)}
+            onSortPress={() => setShowSortOptions(true)}
+          />
+
+          {filteredReviews.length === 0 ? (
+            <EmptyState
+              icon="🍞"
+              title={selectedBreadType === 'all' ? 'No reviews yet' : `No ${formatBreadType(selectedBreadType)} reviews`}
+              message="Start reviewing bread to build your collection!"
+            />
+          ) : (
+            <FlatList
+              data={filteredReviews}
+              renderItem={({ item }) => <ReviewCard review={item} />}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#d97706"
+                  colors={['#d97706']}
+                />
+              }
+            />
+          )}
+        </>
+      )}
+
+      {activeTab === 'saved' && (
+        <>
+          {savedPlaces.length === 0 ? (
+            <EmptyState
+              icon="📍"
+              title="No saved places yet"
+              message="Save bakeries from the map to find them easily later!"
+            />
+          ) : (
+            <FlatList
+              data={savedPlaces}
+              renderItem={({ item }) => <SavedPlaceCard place={item} />}
+              keyExtractor={item => item.id.toString()}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#d97706"
+                  colors={['#d97706']}
+                />
+              }
+            />
+          )}
+        </>
+      )}
+
+      <FilterModal
+        visible={showBreadFilter}
+        title="Filter by Bread Type"
+        options={breadTypeOptions}
+        selectedValue={selectedBreadType}
+        onSelect={setSelectedBreadType}
+        onClose={() => setShowBreadFilter(false)}
+      />
+
+      <FilterModal
+        visible={showSortOptions}
+        title="Sort By"
+        options={sortOptions}
+        selectedValue={sortBy}
+        onSelect={setSortBy}
+        onClose={() => setShowSortOptions(false)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fef7ed',
   },
-  header: {
-    backgroundColor: '#fff',
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  profileInfo: {
-    marginLeft: 16,
+  loadingContainer: {
     flex: 1,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  bio: {
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  stats: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  statItem: {
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fef7ed',
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  reviewsSection: {
+  listContent: {
     padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  reviewCard: {
-    flex: 1,
-    margin: 4,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  reviewImage: {
-    width: '100%',
-    height: 150,
-  },
-  reviewInfo: {
-    padding: 12,
-  },
-  reviewBakery: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  reviewBreadType: {
-    color: '#d97706',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  reviewRatingText: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: '600',
+    paddingTop: 4,
   },
 });
