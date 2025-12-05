@@ -1,21 +1,21 @@
-import { useEffect, useState } from "react";
 import { router } from "expo-router";
-import { Heart, MessageCircle, Plus, Star, X, Send } from "lucide-react-native";
+import { Heart, MessageCircle, Plus, Send, Star, X } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
 import { supabase } from "../../lib/supabase";
 

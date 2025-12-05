@@ -1,7 +1,9 @@
-import { MapPin, X } from 'lucide-react-native';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Bookmark, MapPin, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { BakeryWithReviews, ReviewWithProfile } from '../../lib/database.types';
+import { supabase } from '../../lib/supabase';
 import { ImageCarousel } from './image-carousel';
 import { ReviewCard } from './review-card';
 import { StarRating } from './star-rating';
@@ -17,6 +19,76 @@ function getImages(bakery: BakeryWithReviews): string[] {
 }
 
 export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsModalProps) {
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible && bakery) {
+      getCurrentUser();
+    }
+  }, [visible, bakery]);
+
+  useEffect(() => {
+    if (userId && bakery) {
+      checkIfSaved();
+    }
+  }, [userId, bakery]);
+
+  async function getCurrentUser() {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUserId(user?.id || null);
+  }
+
+  async function checkIfSaved() {
+    if (!userId || !bakery) return;
+    
+    const { data } = await supabase
+      .from('saved')
+      .select('id')
+      .eq('user', userId)
+      .eq('bakery', bakery.id)
+      .maybeSingle();
+    
+    setIsSaved(!!data);
+  }
+
+  async function toggleSave() {
+    if (!userId || !bakery || isSaving) return;
+    
+    setIsSaving(true);
+    
+    try {
+      if (isSaved) {
+        // Remove from saved
+        await supabase
+          .from('saved')
+          .delete()
+          .eq('user', userId)
+          .eq('bakery', bakery.id);
+
+        console.log('Removed from saved');
+        setIsSaved(false);
+      } else {
+        // Add to saved
+        const insertData: { user: string; bakery: string } = { 
+          user: userId, 
+          bakery: bakery.id 
+        };
+        const {data, error} = await supabase
+          .from('saved')
+          .insert(insertData as any);
+        if (error) throw error;
+        console.log('Added to saved');
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   if (!bakery) return null;
 
   const images = getImages(bakery);
@@ -37,7 +109,21 @@ export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsMo
           <Text style={styles.title} numberOfLines={1}>
             {bakery.name}
           </Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity 
+            onPress={toggleSave} 
+            style={styles.saveButton}
+            disabled={isSaving || !userId}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#d97706" />
+            ) : (
+              <Bookmark 
+                size={24} 
+                color={isSaved ? '#d97706' : '#374151'} 
+                fill={isSaved ? '#d97706' : 'transparent'}
+              />
+            )}
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -122,6 +208,14 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E7E5E4',
   },
   closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButton: {
     width: 40,
     height: 40,
     borderRadius: 20,

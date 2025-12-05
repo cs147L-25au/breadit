@@ -117,6 +117,26 @@ export interface Database {
           updated_at?: string;
         };
       };
+      saved: {
+        Row: {
+          id: number;
+          created_at: string;
+          user: string;
+          bakery: string;
+        };
+        Insert: {
+          id?: number;
+          created_at?: string;
+          user: string;
+          bakery: string;
+        };
+        Update: {
+          id?: number;
+          created_at?: string;
+          user?: string;
+          bakery?: string;
+        };
+      };
     };
     Views: {};
     Functions: {};
@@ -130,6 +150,7 @@ export interface Database {
 export type Bakery = Database['public']['Tables']['bakeries']['Row'];
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Review = Database['public']['Tables']['reviews']['Row'];
+export type Saved = Database['public']['Tables']['saved']['Row'];
 
 // Extended types with relations
 export type ReviewWithProfile = Review & {
