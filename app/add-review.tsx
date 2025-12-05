@@ -46,6 +46,7 @@ interface BakeryResult {
 
 export default function AddReviewScreen() {
   const [image, setImage] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [bakeryName, setBakeryName] = useState("");
   const [bakeryAddress, setBakeryAddress] = useState("");
   const [bakeryCoordinates, setBakeryCoordinates] = useState<{
@@ -67,7 +68,7 @@ export default function AddReviewScreen() {
   const [bakerySearchQuery, setBakerySearchQuery] = useState("");
   const [bakeryResults, setBakeryResults] = useState<BakeryResult[]>([]);
   const [searchingBakeries, setSearchingBakeries] = useState(false);
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Manual bakery entry
   const [showManualBakery, setShowManualBakery] = useState(false);
@@ -167,10 +168,12 @@ export default function AddReviewScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
+      base64: true,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets[0]) {
       setImage(result.assets[0].uri);
+      setImageBase64(result.assets[0].base64 || null);
     }
   }
 
@@ -189,29 +192,33 @@ export default function AddReviewScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
+      base64: true,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets[0]) {
       setImage(result.assets[0].uri);
+      setImageBase64(result.assets[0].base64 || null);
     }
   }
 
-  async function uploadImage(uri: string): Promise<string> {
+  async function uploadImage(base64Data: string): Promise<string> {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    // Decode base64 to Uint8Array
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
 
-    const fileExt = uri.split(".").pop();
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const fileName = `${user.id}-${Date.now()}.jpg`;
 
     const { error: uploadError } = await supabase.storage
       .from("bread-images")
-      .upload(filePath, blob, {
+      .upload(fileName, bytes, {
         contentType: "image/jpeg",
         upsert: false,
       });
@@ -220,13 +227,13 @@ export default function AddReviewScreen() {
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from("bread-images").getPublicUrl(filePath);
+    } = supabase.storage.from("bread-images").getPublicUrl(fileName);
 
     return publicUrl;
   }
 
   async function handleSubmit() {
-    if (!image) {
+    if (!image || !imageBase64) {
       Alert.alert("Missing photo", "Please add a photo of the bread");
       return;
     }
@@ -244,7 +251,7 @@ export default function AddReviewScreen() {
       if (!user) throw new Error("Not authenticated");
 
       console.log("Uploading image...");
-      const imageUrl = await uploadImage(image);
+      const imageUrl = await uploadImage(imageBase64);
       console.log("Image uploaded:", imageUrl);
 
       const { data: existingBakery } = await supabase
@@ -299,6 +306,7 @@ export default function AddReviewScreen() {
           text: "OK",
           onPress: () => {
             setImage(null);
+            setImageBase64(null);
             setBakeryName("");
             setBakeryAddress("");
             setBakeryCoordinates(null);
@@ -358,7 +366,10 @@ export default function AddReviewScreen() {
               <View style={styles.imageButtons}>
                 <TouchableOpacity
                   style={styles.changePhotoButton}
-                  onPress={() => setImage(null)}
+                  onPress={() => {
+                    setImage(null);
+                    setImageBase64(null);
+                  }}
                 >
                   <Text style={styles.changePhotoText}>Remove Photo</Text>
                 </TouchableOpacity>
