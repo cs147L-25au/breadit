@@ -1,14 +1,14 @@
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Text,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 
 export default function LoginScreen() {
@@ -50,6 +50,7 @@ export default function LoginScreen() {
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
+        placeholderTextColor="#a9a9a9"
       />
 
       <TextInput
@@ -58,6 +59,7 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        placeholderTextColor="#a9a9a9"
       />
 
       <TouchableOpacity
@@ -104,6 +106,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,
+    backgroundColor: "#f3f4f6",
   },
   button: {
     backgroundColor: "#d97706",
