@@ -1,12 +1,21 @@
-import { Bookmark, MapPin, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Bookmark, MapPin, X } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { BakeryWithReviews, ReviewWithProfile } from '../../lib/database.types';
-import { supabase } from '../../lib/supabase';
-import { ImageCarousel } from './image-carousel';
-import { ReviewCard } from './review-card';
-import { StarRating } from './star-rating';
+import { BakeryWithReviews, ReviewWithProfile } from "../../lib/database.types";
+import { supabase } from "../../lib/supabase";
+import { ImageCarousel } from "./image-carousel";
+import { ReviewCard } from "./review-card";
+import { StarRating } from "./star-rating";
+import { Fonts, Colors } from "../../constants/Styles";
 
 interface BakeryDetailsModalProps {
   bakery: BakeryWithReviews | null;
@@ -15,10 +24,16 @@ interface BakeryDetailsModalProps {
 }
 
 function getImages(bakery: BakeryWithReviews): string[] {
-  return bakery.reviews.filter((r) => r.image_url).map((r) => r.image_url as string);
+  return bakery.reviews
+    .filter((r) => r.image_url)
+    .map((r) => r.image_url as string);
 }
 
-export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsModalProps) {
+export function BakeryDetailsModal({
+  bakery,
+  visible,
+  onClose,
+}: BakeryDetailsModalProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -36,54 +51,52 @@ export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsMo
   }, [userId, bakery]);
 
   async function getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     setUserId(user?.id || null);
   }
 
   async function checkIfSaved() {
     if (!userId || !bakery) return;
-    
+
     const { data } = await supabase
-      .from('saved')
-      .select('id')
-      .eq('user', userId)
-      .eq('bakery', bakery.id)
+      .from("saved")
+      .select("id")
+      .eq("user", userId)
+      .eq("bakery", bakery.id)
       .maybeSingle();
-    
+
     setIsSaved(!!data);
   }
 
   async function toggleSave() {
     if (!userId || !bakery || isSaving) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       if (isSaved) {
-        // Remove from saved
         await supabase
-          .from('saved')
+          .from("saved")
           .delete()
-          .eq('user', userId)
-          .eq('bakery', bakery.id);
+          .eq("user", userId)
+          .eq("bakery", bakery.id);
 
-        console.log('Removed from saved');
         setIsSaved(false);
       } else {
-        // Add to saved
-        const insertData: { user: string; bakery: string } = { 
-          user: userId, 
-          bakery: bakery.id 
+        const insertData: { user: string; bakery: string } = {
+          user: userId,
+          bakery: bakery.id,
         };
-        const {data, error} = await supabase
-          .from('saved')
+        const { error } = await supabase
+          .from("saved")
           .insert(insertData as any);
         if (error) throw error;
-        console.log('Added to saved');
         setIsSaved(true);
       }
     } catch (error) {
-      console.error('Error toggling save:', error);
+      console.error("Error toggling save:", error);
     } finally {
       setIsSaving(false);
     }
@@ -103,24 +116,24 @@ export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsMo
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={24} color="#374151" />
+          <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+            <X size={24} color={Colors.text} />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1}>
             {bakery.name}
           </Text>
-          <TouchableOpacity 
-            onPress={toggleSave} 
-            style={styles.saveButton}
+          <TouchableOpacity
+            onPress={toggleSave}
+            style={styles.iconButton}
             disabled={isSaving || !userId}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color="#d97706" />
+              <ActivityIndicator size="small" color={Colors.primary} />
             ) : (
-              <Bookmark 
-                size={24} 
-                color={isSaved ? '#d97706' : '#374151'} 
-                fill={isSaved ? '#d97706' : 'transparent'}
+              <Bookmark
+                size={24}
+                color={isSaved ? Colors.primary : Colors.text}
+                fill={isSaved ? Colors.primary : "transparent"}
               />
             )}
           </TouchableOpacity>
@@ -135,7 +148,7 @@ export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsMo
 
           {/* Address */}
           <View style={styles.addressContainer}>
-            <MapPin size={16} color="#6B7280" />
+            <MapPin size={16} color={Colors.textLight} />
             <Text style={styles.addressText}>{bakery.address}</Text>
           </View>
 
@@ -143,9 +156,13 @@ export function BakeryDetailsModal({ bakery, visible, onClose }: BakeryDetailsMo
           <View style={styles.reviewsSection}>
             <Text style={styles.reviewsSectionTitle}>Reviews</Text>
             {bakery.reviews.length === 0 ? (
-              <Text style={styles.noReviewsText}>No reviews yet. Be the first to review!</Text>
+              <Text style={styles.noReviewsText}>
+                No reviews yet. Be the first to review!
+              </Text>
             ) : (
-              bakery.reviews.map((review) => <ReviewCard key={review.id} review={review} />)
+              bakery.reviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))
             )}
           </View>
         </ScrollView>
@@ -163,19 +180,20 @@ function RatingSummary({ bakery }: RatingSummaryProps) {
     <View style={styles.ratingSummary}>
       <View style={styles.overallRating}>
         <Text style={styles.overallRatingNumber}>
-          {bakery.averageRating > 0 ? bakery.averageRating.toFixed(1) : '–'}
+          {bakery.averageRating > 0 ? bakery.averageRating.toFixed(1) : "–"}
         </Text>
         <StarRating rating={bakery.averageRating} />
         <Text style={styles.reviewCountText}>
-          {bakery.reviews.length} review{bakery.reviews.length !== 1 ? 's' : ''}
+          {bakery.reviews.length} review{bakery.reviews.length !== 1 ? "s" : ""}
         </Text>
       </View>
 
       {/* Rating Breakdown */}
       {bakery.reviews.length > 0 && (
         <View style={styles.ratingBreakdown}>
-          {['Crust', 'Crumb', 'Flavor'].map((category) => {
-            const key = `rating_${category.toLowerCase()}` as keyof ReviewWithProfile;
+          {["Crust", "Crumb", "Flavor"].map((category) => {
+            const key =
+              `rating_${category.toLowerCase()}` as keyof ReviewWithProfile;
             const avg =
               bakery.reviews.reduce((sum, r) => sum + Number(r[key] || 0), 0) /
               bakery.reviews.length;
@@ -196,114 +214,109 @@ function RatingSummary({ bakery }: RatingSummaryProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E7E5E4',
+    borderBottomColor: Colors.surface,
   },
-  closeButton: {
+  iconButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F5F4',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F4',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.borderLight,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#292524',
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   content: {
     flex: 1,
   },
   ratingSummary: {
     padding: 20,
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: '#E7E5E4',
+    borderBottomColor: Colors.border,
   },
   overallRating: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingRight: 24,
     borderRightWidth: 1,
-    borderRightColor: '#E7E5E4',
+    borderRightColor: Colors.border,
   },
   overallRatingNumber: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#292524',
+    fontFamily: Fonts.bold,
+    color: Colors.text,
   },
   reviewCountText: {
     marginTop: 4,
     fontSize: 12,
-    color: '#78716C',
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
   },
   ratingBreakdown: {
     flex: 1,
     paddingLeft: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
     gap: 8,
   },
   breakdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   breakdownLabel: {
     width: 50,
     fontSize: 12,
-    color: '#78716C',
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
   },
   breakdownValue: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#292524',
+    fontFamily: Fonts.semibold,
+    color: Colors.text,
     marginLeft: 8,
   },
   addressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E7E5E4',
+    borderBottomColor: Colors.border,
   },
   addressText: {
     flex: 1,
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
   },
   reviewsSection: {
     padding: 20,
   },
   reviewsSectionTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#292524',
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     marginBottom: 16,
   },
   noReviewsText: {
     fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
+    textAlign: "center",
     paddingVertical: 32,
   },
 });
-
