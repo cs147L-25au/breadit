@@ -991,15 +991,6 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginTop: 4,
   },
-  emptyResults: {
-    padding: 32,
-    alignItems: "center",
-  },
-  emptyResultsText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.textLighter,
-  },
   manualBakeryForm: {
     padding: 16,
   },
@@ -1016,16 +1007,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.medium,
     color: Colors.textLight,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    backgroundColor: Colors.background,
-    color: Colors.text, // Dark text color
   },
   emptyResultsContainer: {
     padding: 24,
