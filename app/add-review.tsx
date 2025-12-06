@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
+import { Colors, Fonts } from "../constants/Styles";
 
 const BREAD_TYPES = [
   "sourdough",
@@ -83,7 +84,6 @@ export default function AddReviewScreen() {
 
     setSearchingBakeries(true);
     try {
-      // Using Google Places API Text Search
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
           query + " bakery"
@@ -102,9 +102,12 @@ export default function AddReviewScreen() {
             longitude: place.geometry.location.lng,
           }));
         setBakeryResults(formatted);
+      } else {
+        setBakeryResults([]);
       }
     } catch (error) {
       console.error("Error searching bakeries:", error);
+      setBakeryResults([]);
     } finally {
       setSearchingBakeries(false);
     }
@@ -113,7 +116,6 @@ export default function AddReviewScreen() {
   function handleBakerySearchChange(text: string) {
     setBakerySearchQuery(text);
 
-    // Debounce search
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
     }
@@ -133,6 +135,12 @@ export default function AddReviewScreen() {
     setBakeryResults([]);
   }
 
+  function openManualEntryFromSearch() {
+    setManualBakeryName(bakerySearchQuery);
+    setShowBakerySearch(false);
+    setShowManualBakery(true);
+  }
+
   function handleManualBakerySubmit() {
     if (!manualBakeryName.trim()) {
       Alert.alert("Error", "Please enter a bakery name");
@@ -145,7 +153,7 @@ export default function AddReviewScreen() {
 
     setBakeryName(manualBakeryName);
     setBakeryAddress(manualBakeryAddress);
-    setBakeryCoordinates(null); // Will use default coordinates
+    setBakeryCoordinates(null);
     setGooglePlaceId(null);
     setShowManualBakery(false);
     setManualBakeryName("");
@@ -207,7 +215,6 @@ export default function AddReviewScreen() {
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    // Decode base64 to Uint8Array
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -413,28 +420,21 @@ export default function AddReviewScreen() {
                   setBakeryName("");
                   setBakeryAddress("");
                   setBakeryCoordinates(null);
+                  setGooglePlaceId(null);
                 }}
               >
                 <X size={20} color="#6b7280" />
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.bakeryButtons}>
-              <TouchableOpacity
-                style={styles.bakeryButton}
-                onPress={() => setShowBakerySearch(true)}
-              >
-                <Text style={styles.bakeryButtonText}>🔍 Search Bakery</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.bakeryButton}
-                onPress={() => setShowManualBakery(true)}
-              >
-                <Text style={styles.bakeryButtonText}>
-                  ➕ Add Bakery Manually
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.bakerySearchButton}
+              onPress={() => setShowBakerySearch(true)}
+            >
+              <Text style={styles.bakerySearchButtonText}>
+                🔍 Search for bakery
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -481,7 +481,7 @@ export default function AddReviewScreen() {
             value={reviewText}
             onChangeText={setReviewText}
             placeholder="Share your thoughts about this bread..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={Colors.textLight}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -501,7 +501,7 @@ export default function AddReviewScreen() {
         >
           {submitting ? (
             <View style={styles.submittingContainer}>
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={Colors.surface} />
               <Text style={styles.submittingText}>Posting...</Text>
             </View>
           ) : (
@@ -575,6 +575,7 @@ export default function AddReviewScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder="Type bakery name..."
+              placeholderTextColor={Colors.textLight}
               value={bakerySearchQuery}
               onChangeText={handleBakerySearchChange}
               autoFocus
@@ -583,37 +584,54 @@ export default function AddReviewScreen() {
 
           {searchingBakeries ? (
             <View style={styles.searchLoading}>
-              <ActivityIndicator size="large" color="#d97706" />
+              <ActivityIndicator size="large" color={Colors.primary} />
             </View>
           ) : (
-            <FlatList
-              data={bakeryResults}
-              keyExtractor={(item) => item.place_id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.bakeryResultItem}
-                  onPress={() => selectBakery(item)}
-                >
-                  <Text style={styles.bakeryResultName}>{item.name}</Text>
-                  <Text style={styles.bakeryResultAddress}>{item.address}</Text>
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                bakerySearchQuery.length >= 3 ? (
-                  <View style={styles.emptyResults}>
-                    <Text style={styles.emptyResultsText}>
-                      No bakeries found
+            <>
+              <FlatList
+                data={bakeryResults}
+                keyExtractor={(item) => item.google_place_id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.bakeryResultItem}
+                    onPress={() => selectBakery(item)}
+                  >
+                    <Text style={styles.bakeryResultName}>{item.name}</Text>
+                    <Text style={styles.bakeryResultAddress}>
+                      {item.address}
                     </Text>
-                  </View>
-                ) : (
-                  <View style={styles.emptyResults}>
-                    <Text style={styles.emptyResultsText}>
-                      Type at least 3 characters to search
-                    </Text>
-                  </View>
-                )
-              }
-            />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  bakerySearchQuery.length >= 3 ? (
+                    <View style={styles.emptyResultsContainer}>
+                      <View style={styles.emptyResults}>
+                        <Text style={styles.emptyResultsText}>
+                          No bakeries found
+                        </Text>
+                        <Text style={styles.emptyResultsSubtext}>
+                          Can't find your bakery?
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.addManuallyButton}
+                        onPress={openManualEntryFromSearch}
+                      >
+                        <Text style={styles.addManuallyButtonText}>
+                          ➕ Add "{bakerySearchQuery}" manually
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyResults}>
+                      <Text style={styles.emptyResultsText}>
+                        Type at least 3 characters to search
+                      </Text>
+                    </View>
+                  )
+                }
+              />
+            </>
           )}
         </View>
       </Modal>
@@ -625,41 +643,70 @@ export default function AddReviewScreen() {
         transparent={true}
         onRequestClose={() => setShowManualBakery(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Bakery</Text>
-              <TouchableOpacity onPress={() => setShowManualBakery(false)}>
-                <X size={24} color="#374151" />
-              </TouchableOpacity>
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlayTouchable}
+            activeOpacity={1}
+            onPress={() => setShowManualBakery(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={styles.modalContentTall}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Bakery Manually</Text>
+                <TouchableOpacity onPress={() => setShowManualBakery(false)}>
+                  <X size={24} color="#374151" />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.manualBakeryForm}>
-              <Text style={styles.label}>Bakery Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Tartine Bakery"
-                value={manualBakeryName}
-                onChangeText={setManualBakeryName}
-              />
+              <ScrollView style={styles.manualBakeryForm}>
+                <Text style={styles.label}>Bakery Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Tartine Bakery"
+                  placeholderTextColor={Colors.textLight}
+                  value={manualBakeryName}
+                  onChangeText={setManualBakeryName}
+                  autoCapitalize="words"
+                />
 
-              <Text style={[styles.label, { marginTop: 16 }]}>Address *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 600 Guerrero St, San Francisco"
-                value={manualBakeryAddress}
-                onChangeText={setManualBakeryAddress}
-              />
+                <Text style={[styles.label, { marginTop: 16 }]}>Address *</Text>
+                <TextInput
+                  style={[styles.input, styles.addressInput]}
+                  placeholder="e.g., 600 Guerrero St, San Francisco, CA"
+                  placeholderTextColor={Colors.textLight}
+                  value={manualBakeryAddress}
+                  onChangeText={setManualBakeryAddress}
+                  multiline
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.addressHint}>
+                  Please enter full address including street, city, and state
+                </Text>
 
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleManualBakerySubmit}
-              >
-                <Text style={styles.submitButtonText}>Add Bakery</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    (!manualBakeryName.trim() || !manualBakeryAddress.trim()) &&
+                      styles.submitButtonDisabled,
+                  ]}
+                  onPress={handleManualBakerySubmit}
+                  disabled={
+                    !manualBakeryName.trim() || !manualBakeryAddress.trim()
+                  }
+                >
+                  <Text style={styles.submitButtonText}>Add Bakery</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -668,95 +715,102 @@ export default function AddReviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: Colors.background,
   },
   scrollView: {
     flex: 1,
   },
   section: {
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
     marginBottom: 1,
   },
   label: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     marginBottom: 8,
-    color: "#374151",
+    color: Colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 12,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
-    backgroundColor: "#fff",
+    fontFamily: Fonts.regular,
+    backgroundColor: Colors.surface,
+    color: Colors.text,
   },
   textArea: {
     minHeight: 100,
   },
   characterCount: {
     fontSize: 12,
-    color: "#9ca3af",
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
     textAlign: "right",
     marginTop: 4,
   },
   imagePreview: {
     width: "100%",
     height: 300,
-    borderRadius: 8,
-    backgroundColor: "#e5e7eb",
+    borderRadius: 12,
+    backgroundColor: Colors.borderLight,
   },
   imageButtons: {
     marginTop: 12,
   },
   changePhotoButton: {
     padding: 12,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 8,
+    backgroundColor: Colors.background,
+    borderRadius: 12,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   changePhotoText: {
-    color: "#ef4444",
-    fontWeight: "600",
+    color: Colors.error,
+    fontFamily: Fonts.semibold,
   },
   imagePickerContainer: {
     gap: 12,
   },
   imagePickerButton: {
     padding: 16,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#d1d5db",
+    borderColor: Colors.border,
     borderStyle: "dashed",
     alignItems: "center",
   },
   imagePickerText: {
     fontSize: 16,
-    color: "#6b7280",
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
   },
   selectedBakery: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 12,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 8,
+    padding: 14,
+    backgroundColor: Colors.secondaryLight,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: Colors.secondary,
   },
   selectedBakeryInfo: {
     flex: 1,
   },
   selectedBakeryName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
+    fontFamily: Fonts.semibold,
+    color: Colors.text,
   },
   selectedBakeryAddress: {
     fontSize: 14,
-    color: "#6b7280",
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
     marginTop: 2,
   },
   bakeryButtons: {
@@ -764,35 +818,38 @@ const styles = StyleSheet.create({
   },
   bakeryButton: {
     padding: 16,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 8,
+    backgroundColor: Colors.background,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#d1d5db",
+    borderColor: Colors.border,
     borderStyle: "dashed",
     alignItems: "center",
   },
   bakeryButtonText: {
     fontSize: 16,
-    color: "#6b7280",
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
   },
   dropdown: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: "#fff",
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: Colors.surface,
   },
   dropdownText: {
     fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.text,
   },
   ratingSection: {
     marginBottom: 8,
   },
   ratingLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     marginBottom: 8,
-    color: "#374151",
+    color: Colors.text,
   },
   starsContainer: {
     flexDirection: "row",
@@ -800,18 +857,24 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     margin: 16,
-    padding: 16,
-    backgroundColor: "#d97706",
-    borderRadius: 8,
+    padding: 18,
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
     alignItems: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   submitButtonDisabled: {
     opacity: 0.5,
   },
   submitButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    color: Colors.surface,
+    fontSize: 17,
+    fontFamily: Fonts.bold,
+    letterSpacing: 0.5,
   },
   submittingContainer: {
     flexDirection: "row",
@@ -819,9 +882,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submittingText: {
-    color: "#fff",
+    color: Colors.surface,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
   },
   bottomSpacer: {
     height: 32,
@@ -833,9 +896,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "80%",
   },
   modalHeader: {
@@ -844,11 +907,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: Colors.border,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
   },
   modalScroll: {
     maxHeight: 400,
@@ -859,24 +923,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: Colors.borderLight,
   },
   modalItemText: {
     fontSize: 16,
-    color: "#374151",
+    fontFamily: Fonts.regular,
+    color: Colors.text,
   },
   modalItemTextSelected: {
-    color: "#d97706",
-    fontWeight: "600",
+    color: Colors.primary,
+    fontFamily: Fonts.semibold,
   },
   checkmark: {
     fontSize: 20,
-    color: "#d97706",
+    color: Colors.primary,
   },
   // Search modal styles
   searchModalContainer: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
   },
   searchHeader: {
     flexDirection: "row",
@@ -884,22 +949,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: Colors.border,
     paddingTop: 60,
   },
   searchTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
   },
   searchInputContainer: {
     padding: 16,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 12,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
+    fontFamily: Fonts.regular,
+    backgroundColor: Colors.background,
+    color: Colors.text,
   },
   searchLoading: {
     flex: 1,
@@ -909,16 +978,17 @@ const styles = StyleSheet.create({
   bakeryResultItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: Colors.borderLight,
   },
   bakeryResultName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
+    fontFamily: Fonts.semibold,
+    color: Colors.text,
   },
   bakeryResultAddress: {
     fontSize: 14,
-    color: "#6b7280",
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
     marginTop: 4,
   },
   emptyResults: {
@@ -927,9 +997,84 @@ const styles = StyleSheet.create({
   },
   emptyResultsText: {
     fontSize: 16,
-    color: "#9ca3af",
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
   },
   manualBakeryForm: {
     padding: 16,
+  },
+  bakerySearchButton: {
+    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center",
+    borderStyle: "dashed",
+  },
+  bakerySearchButtonText: {
+    fontSize: 16,
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    backgroundColor: Colors.background,
+    color: Colors.text, // Dark text color
+  },
+  emptyResultsContainer: {
+    padding: 24,
+  },
+  emptyResults: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyResultsText: {
+    fontSize: 16,
+    fontFamily: Fonts.medium,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  emptyResultsSubtext: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+  },
+  addManuallyButton: {
+    backgroundColor: Colors.secondary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  addManuallyButtonText: {
+    color: Colors.surface,
+    fontSize: 16,
+    fontFamily: Fonts.semibold,
+  },
+  modalOverlayTouchable: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalContentTall: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "90%",
+  },
+  addressInput: {
+    minHeight: 60,
+  },
+  addressHint: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
+    marginTop: 4,
+    fontStyle: "italic",
   },
 });

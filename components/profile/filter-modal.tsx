@@ -1,4 +1,12 @@
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Fonts, Colors } from "../../constants/Styles";
 
 interface FilterOption<T> {
   value: T;
@@ -48,7 +56,8 @@ export function FilterModal<T extends string>({
                 <Text
                   style={[
                     styles.modalOptionText,
-                    selectedValue === option.value && styles.modalOptionTextSelected,
+                    selectedValue === option.value &&
+                      styles.modalOptionTextSelected,
                   ]}
                 >
                   {option.label}
@@ -71,21 +80,21 @@ export function FilterModal<T extends string>({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingBottom: 34,
-    maxHeight: '70%',
+    maxHeight: "70%",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1f2937',
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     paddingHorizontal: 20,
     marginBottom: 12,
   },
@@ -93,42 +102,42 @@ const styles = StyleSheet.create({
     maxHeight: 320,
   },
   modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: Colors.borderLight,
   },
   modalOptionSelected: {
-    backgroundColor: '#fff7ed',
+    backgroundColor: Colors.primaryLight,
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#374151',
+    fontFamily: Fonts.regular,
+    color: Colors.text,
   },
   modalOptionTextSelected: {
-    color: '#d97706',
-    fontWeight: '600',
+    color: Colors.primary,
+    fontFamily: Fonts.semibold,
   },
   checkmark: {
     fontSize: 18,
-    color: '#d97706',
-    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
   },
   modalCloseButton: {
     marginTop: 12,
     marginHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: Colors.borderLight,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalCloseText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontFamily: Fonts.semibold,
+    color: Colors.text,
   },
 });
-

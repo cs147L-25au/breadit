@@ -1,9 +1,8 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
-
+import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { supabase } from "../lib/supabase";
-
+import { Colors } from "../constants/Styles";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export default function Index() {
@@ -39,7 +38,11 @@ export default function Index() {
   }, []);
 
   if (isLoading) {
-    return <View style={styles.container} />;
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
   }
 
   if (session) {
@@ -52,6 +55,8 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.background,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

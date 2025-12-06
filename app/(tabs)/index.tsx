@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { Heart, MessageCircle, Plus, Send, Star, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { FlatList } from "react-native";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -18,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../../lib/supabase";
+import { Colors, Fonts } from "../../constants/Styles";
 
 interface Review {
   id: string;
@@ -68,6 +70,20 @@ export default function FeedScreen() {
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, -50],
+    extrapolate: "clamp",
+  });
 
   useEffect(() => {
     getCurrentUser();
@@ -146,8 +162,12 @@ export default function FeedScreen() {
 
           return {
             ...review,
-            profiles: Array.isArray(review.profiles) ? review.profiles[0] : review.profiles,
-            bakeries: Array.isArray(review.bakeries) ? review.bakeries[0] : review.bakeries,
+            profiles: Array.isArray(review.profiles)
+              ? review.profiles[0]
+              : review.profiles,
+            bakeries: Array.isArray(review.bakeries)
+              ? review.bakeries[0]
+              : review.bakeries,
             likes_count: likesCount || 0,
             comments_count: commentsCount || 0,
             user_has_liked: userHasLiked,
@@ -220,24 +240,35 @@ export default function FeedScreen() {
         .from("comments")
         .select(
           `
-          id,
-          comment_text,
-          created_at,
-          profiles (
-            username,
-            full_name,
-            avatar_url
-          )
-        `
+        id,
+        comment_text,
+        created_at,
+        user_id,
+        profiles!comments_user_id_fkey (
+          username,
+          full_name,
+          avatar_url
+        )
+      `
         )
         .eq("review_id", reviewId)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
-      setComments(data?.map((comment) => ({
+      if (error) {
+        console.error("Error fetching comments:", error);
+        throw error;
+      }
+
+      console.log("Comments data:", data); // Debug log
+
+      const formattedComments = (data || []).map((comment) => ({
         ...comment,
-        profiles: comment.profiles[0],
-      })) || []);
+        profiles: Array.isArray(comment.profiles)
+          ? comment.profiles[0]
+          : comment.profiles,
+      }));
+
+      setComments(formattedComments);
     } catch (error) {
       console.error("Error loading comments:", error);
       Alert.alert("Error", "Failed to load comments");
@@ -290,22 +321,27 @@ export default function FeedScreen() {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.userInfo}>
-        {item.profiles?.avatar_url ? (
-          <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarInitial}>
-              {item.profiles?.username?.[0]?.toUpperCase() || '?'}
-            </Text>
-          </View>
-        )}
-          <View>
-            <Text style={styles.userName}>
+          {item.profiles?.avatar_url ? (
+            <Image
+              source={{ uri: item.profiles.avatar_url }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitial}>
+                {item.profiles?.username?.[0]?.toUpperCase() || "?"}
+              </Text>
+            </View>
+          )}
+          <View style={styles.userTextInfo}>
+            <Text style={styles.userName} numberOfLines={1}>
               {item.profiles?.full_name ||
                 item.profiles?.username ||
                 "Anonymous"}
             </Text>
-            <Text style={styles.bakeryName}>{item.bakeries?.name}</Text>
+            <Text style={styles.bakeryName} numberOfLines={1}>
+              {item.bakeries?.name}
+            </Text>
           </View>
         </View>
         <View style={styles.ratingBadge}>
@@ -394,7 +430,7 @@ export default function FeedScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#d97706" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -501,6 +537,7 @@ export default function FeedScreen() {
             <TextInput
               style={styles.commentInput}
               placeholder="Add a comment..."
+              placeholderTextColor={Colors.textLight}
               value={newComment}
               onChangeText={setNewComment}
               multiline
@@ -531,13 +568,13 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: Colors.primaryLight,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f9fafb",
+    backgroundColor: Colors.primaryLight,
   },
   emptyState: {
     flex: 1,
@@ -547,39 +584,46 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#374151",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 16,
-    color: "#6b7280",
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
     textAlign: "center",
     marginBottom: 24,
   },
   emptyStateButton: {
-    backgroundColor: "#d97706",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emptyStateButtonText: {
-    color: "#fff",
+    color: Colors.surface,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
   },
   listContent: {
     padding: 16,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 3,
+    overflow: "hidden",
   },
   cardHeader: {
     padding: 16,
@@ -591,6 +635,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: 12,
+  },
+  userTextInfo: {
+    flex: 1,
+    marginRight: 8,
   },
   avatar: {
     width: 40,
@@ -598,28 +647,49 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 12,
   },
+  avatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  avatarInitial: {
+    color: Colors.primary,
+    fontSize: 18,
+    fontFamily: Fonts.bold,
+  },
   userName: {
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     fontSize: 16,
+    color: Colors.text,
   },
   bakeryName: {
-    color: "#6b7280",
+    color: Colors.textLight,
     fontSize: 14,
+    fontFamily: Fonts.regular,
     marginTop: 2,
   },
   ratingBadge: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   ratingText: {
     marginLeft: 4,
-    fontWeight: "600",
-    fontSize: 16,
+    fontFamily: Fonts.semibold,
+    fontSize: 14,
+    color: Colors.primary,
   },
   breadImage: {
     width: "100%",
     height: 300,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: Colors.borderLight,
   },
   cardContent: {
     padding: 16,
@@ -630,9 +700,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   breadType: {
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     fontSize: 16,
-    color: "#d97706",
+    color: Colors.primary,
   },
   ratingsRow: {
     flexDirection: "row",
@@ -641,15 +711,19 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     fontSize: 12,
-    color: "#6b7280",
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
   },
   ratingValue: {
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
+    fontSize: 14,
+    color: Colors.text,
     marginTop: 2,
   },
   reviewText: {
-    color: "#374151",
-    lineHeight: 20,
+    color: Colors.text,
+    fontFamily: Fonts.regular,
+    lineHeight: 22,
     marginBottom: 12,
   },
   actions: {
@@ -663,11 +737,12 @@ const styles = StyleSheet.create({
   },
   actionText: {
     marginLeft: 6,
-    color: "#6b7280",
-    fontWeight: "600",
+    color: Colors.textLight,
+    fontFamily: Fonts.medium,
+    fontSize: 14,
   },
   actionTextLiked: {
-    color: "#ef4444",
+    color: Colors.error,
   },
   fab: {
     position: "absolute",
@@ -676,19 +751,19 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#d97706",
+    backgroundColor: Colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: 12,
     elevation: 8,
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
   },
   modalHeader: {
     flexDirection: "row",
@@ -696,12 +771,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: Colors.border,
     paddingTop: 60,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
   },
   modalLoading: {
     flex: 1,
@@ -720,13 +796,14 @@ const styles = StyleSheet.create({
   },
   noCommentsText: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#6b7280",
+    fontFamily: Fonts.semibold,
+    color: Colors.textLight,
     marginBottom: 8,
   },
   noCommentsSubtext: {
     fontSize: 14,
-    color: "#9ca3af",
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
   },
   commentItem: {
     flexDirection: "row",
@@ -740,39 +817,44 @@ const styles = StyleSheet.create({
   },
   commentContent: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: Colors.background,
     padding: 12,
     borderRadius: 12,
   },
   commentUsername: {
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     fontSize: 14,
+    color: Colors.text,
     marginBottom: 4,
   },
   commentText: {
     fontSize: 14,
-    color: "#374151",
+    fontFamily: Fonts.regular,
+    color: Colors.text,
     lineHeight: 20,
   },
   commentInputContainer: {
     flexDirection: "row",
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: Colors.border,
     alignItems: "flex-end",
+    backgroundColor: Colors.surface,
   },
   commentInput: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: Colors.background,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginRight: 8,
     maxHeight: 100,
     fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.text,
   },
   sendButton: {
-    backgroundColor: "#d97706",
+    backgroundColor: Colors.primary,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -781,19 +863,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 36,
-    backgroundColor: '#D97706',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarInitial: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
   },
 });
