@@ -1,7 +1,8 @@
-import { Bookmark, Star } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Bookmark, Star } from "lucide-react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Fonts, Colors } from "../../constants/Styles";
 
-export type TabType = 'reviews' | 'saved';
+export type TabType = "reviews" | "saved";
 
 interface ProfileTabsProps {
   activeTab: TabType;
@@ -9,23 +10,30 @@ interface ProfileTabsProps {
 }
 
 export function ProfileTabs({ activeTab, onTabChange }: ProfileTabsProps) {
+  const isReviews = activeTab === "reviews";
+  const isSaved = activeTab === "saved";
+
   return (
     <View style={styles.tabContainer}>
-      <TouchableOpacity 
-        style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
-        onPress={() => onTabChange('reviews')}
+      <TouchableOpacity
+        style={[styles.tab, isReviews && styles.activeTab]}
+        onPress={() => onTabChange("reviews")}
       >
-        <Star size={18} color={activeTab === 'reviews' ? '#d97706' : '#6b7280'} />
-        <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>
+        <Star size={18} color={isReviews ? Colors.primary : Colors.textLight} />
+        <Text style={[styles.tabText, isReviews && styles.activeTabText]}>
           My Reviews
         </Text>
       </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
-        onPress={() => onTabChange('saved')}
+
+      <TouchableOpacity
+        style={[styles.tab, isSaved && styles.activeTab]}
+        onPress={() => onTabChange("saved")}
       >
-        <Bookmark size={18} color={activeTab === 'saved' ? '#d97706' : '#6b7280'} />
-        <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>
+        <Bookmark
+          size={18}
+          color={isSaved ? Colors.primary : Colors.textLight}
+        />
+        <Text style={[styles.tabText, isSaved && styles.activeTabText]}>
           Saved Places
         </Text>
       </TouchableOpacity>
@@ -35,33 +43,32 @@ export function ProfileTabs({ activeTab, onTabChange }: ProfileTabsProps) {
 
 const styles = StyleSheet.create({
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 16,
     paddingTop: 16,
     gap: 8,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
   },
   activeTab: {
-    backgroundColor: '#fff7ed',
+    backgroundColor: "#fff3e1ff",
     borderWidth: 1,
-    borderColor: '#fed7aa',
+    borderColor: Colors.primary,
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
+    fontFamily: Fonts.semibold,
+    color: Colors.textLight,
   },
   activeTabText: {
-    color: '#d97706',
+    color: Colors.primary,
   },
 });
-

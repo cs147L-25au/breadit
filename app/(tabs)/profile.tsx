@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
   View,
-} from 'react-native';
+} from "react-native";
 import {
   BREAD_TYPES,
   EmptyState,
@@ -21,21 +21,24 @@ import {
   type TabType,
   type UserProfile,
   type UserReview,
-} from '../../components/profile';
-import { BreadType } from '../../lib/database.types';
-import { supabase } from '../../lib/supabase';
+} from "../../components/profile";
+import { BreadType } from "../../lib/database.types";
+import { supabase } from "../../lib/supabase";
+import { Fonts, Colors } from "../../constants/Styles";
 
 export default function ProfileScreen() {
-  const [activeTab, setActiveTab] = useState<TabType>('reviews');
+  const [activeTab, setActiveTab] = useState<TabType>("reviews");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
-  
+
   // Filter & sort state
-  const [selectedBreadType, setSelectedBreadType] = useState<BreadType | 'all'>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [selectedBreadType, setSelectedBreadType] = useState<BreadType | "all">(
+    "all"
+  );
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [showBreadFilter, setShowBreadFilter] = useState(false);
   const [showSortOptions, setShowSortOptions] = useState(false);
 
@@ -51,16 +54,18 @@ export default function ProfileScreen() {
 
   async function loadUserData() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
       }
       // Load profile
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, username, full_name, avatar_url')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .eq("id", user.id)
         .single();
 
       if (profileData) {
@@ -69,8 +74,9 @@ export default function ProfileScreen() {
 
       // Load user's reviews
       const { data: reviewsData } = await supabase
-        .from('reviews')
-        .select(`
+        .from("reviews")
+        .select(
+          `
           id,
           bread_type,
           rating_overall,
@@ -85,9 +91,10 @@ export default function ProfileScreen() {
             name,
             address
           )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        `
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (reviewsData) {
         setReviews(reviewsData as UserReview[]);
@@ -95,8 +102,9 @@ export default function ProfileScreen() {
 
       // Load saved places
       const { data: savedData } = await supabase
-        .from('saved')
-        .select(`
+        .from("saved")
+        .select(
+          `
           id,
           created_at,
           bakeries:bakery (
@@ -106,15 +114,16 @@ export default function ProfileScreen() {
             latitude,
             longitude
           )
-        `)
-        .eq('user', user.id)
-        .order('created_at', { ascending: false });
+        `
+        )
+        .eq("user", user.id)
+        .order("created_at", { ascending: false });
 
       if (savedData) {
         setSavedPlaces(savedData as unknown as SavedPlace[]);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error("Error loading user data:", error);
     } finally {
       setLoading(false);
     }
@@ -122,40 +131,56 @@ export default function ProfileScreen() {
 
   // Filter and sort reviews
   const filteredReviews = reviews
-    .filter(review => selectedBreadType === 'all' || review.bread_type === selectedBreadType)
+    .filter(
+      (review) =>
+        selectedBreadType === "all" || review.bread_type === selectedBreadType
+    )
     .sort((a, b) => {
       switch (sortBy) {
-        case 'highest':
+        case "highest":
           return b.rating_overall - a.rating_overall;
-        case 'lowest':
+        case "lowest":
           return a.rating_overall - b.rating_overall;
-        case 'newest':
+        case "newest":
         default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
       }
     });
 
   // Calculate stats
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating_overall, 0) / reviews.length).toFixed(1)
-    : '0.0';
-  
-  const uniqueBakeries = new Set(reviews.map(r => r.bakeries?.id)).size;
+  const avgRating =
+    reviews.length > 0
+      ? (
+          reviews.reduce((sum, r) => sum + r.rating_overall, 0) / reviews.length
+        ).toFixed(1)
+      : "0.0";
+
+  const uniqueBakeries = new Set(reviews.map((r) => r.bakeries?.id)).size;
 
   // Filter options
-  const breadTypeOptions = BREAD_TYPES.map(type => ({
+  const breadTypeOptions = BREAD_TYPES.map((type) => ({
     value: type,
-    label: type === 'all' ? 'All Types' : formatBreadType(type),
+    label: type === "all" ? "All Types" : formatBreadType(type),
   }));
 
   const sortOptions: { value: SortOption; label: string }[] = [
-    { value: 'newest', label: 'Newest First' },
-    { value: 'highest', label: 'Highest Rated' },
-    { value: 'lowest', label: 'Lowest Rated' },
+    { value: "newest", label: "Newest First" },
+    { value: "highest", label: "Highest Rated" },
+    { value: "lowest", label: "Lowest Rated" },
   ];
 
-  const breadTypeLabel = selectedBreadType === 'all' ? 'All Types' : formatBreadType(selectedBreadType);
-  const sortLabel = sortBy === 'newest' ? 'Newest' : sortBy === 'highest' ? 'Highest Rated' : 'Lowest Rated';
+  const breadTypeLabel =
+    selectedBreadType === "all"
+      ? "All Types"
+      : formatBreadType(selectedBreadType);
+  const sortLabel =
+    sortBy === "newest"
+      ? "Newest"
+      : sortBy === "highest"
+      ? "Highest Rated"
+      : "Lowest Rated";
 
   if (loading) {
     return (
@@ -177,7 +202,7 @@ export default function ProfileScreen() {
 
       <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {activeTab === 'reviews' && (
+      {activeTab === "reviews" && (
         <>
           <FilterBar
             breadTypeLabel={breadTypeLabel}
@@ -189,14 +214,18 @@ export default function ProfileScreen() {
           {filteredReviews.length === 0 ? (
             <EmptyState
               icon="🍞"
-              title={selectedBreadType === 'all' ? 'No reviews yet' : `No ${formatBreadType(selectedBreadType)} reviews`}
+              title={
+                selectedBreadType === "all"
+                  ? "No reviews yet"
+                  : `No ${formatBreadType(selectedBreadType)} reviews`
+              }
               message="Start reviewing bread to build your collection!"
             />
           ) : (
             <FlatList
               data={filteredReviews}
               renderItem={({ item }) => <ReviewCard review={item} />}
-              keyExtractor={item => item.id}
+              keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
@@ -204,7 +233,7 @@ export default function ProfileScreen() {
                   refreshing={refreshing}
                   onRefresh={onRefresh}
                   tintColor="#d97706"
-                  colors={['#d97706']}
+                  colors={["#d97706"]}
                 />
               }
             />
@@ -212,7 +241,7 @@ export default function ProfileScreen() {
         </>
       )}
 
-      {activeTab === 'saved' && (
+      {activeTab === "saved" && (
         <>
           {savedPlaces.length === 0 ? (
             <EmptyState
@@ -224,7 +253,7 @@ export default function ProfileScreen() {
             <FlatList
               data={savedPlaces}
               renderItem={({ item }) => <SavedPlaceCard place={item} />}
-              keyExtractor={item => item.id.toString()}
+              keyExtractor={(item) => item.id.toString()}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
@@ -232,7 +261,7 @@ export default function ProfileScreen() {
                   refreshing={refreshing}
                   onRefresh={onRefresh}
                   tintColor="#d97706"
-                  colors={['#d97706']}
+                  colors={["#d97706"]}
                 />
               }
             />
@@ -264,13 +293,13 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7ed',
+    backgroundColor: Colors.primaryLight,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fef7ed',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.primaryLight,
   },
   listContent: {
     padding: 16,

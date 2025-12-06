@@ -9,7 +9,7 @@ export const Fonts = {
 
 export const Colors = {
   primary: "#FF8C42",
-  primaryLight: "#FFEABF",
+  primaryLight: "#fef7ed",
   secondary: "#4A90E2",
   secondaryLight: "#E3F2FD",
 
