@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { Heart, MessageCircle, Plus, Send, Star, X } from "lucide-react-native";
 import { useEffect, useState, useRef } from "react";
-import { FlatList } from "react-native";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +16,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  FlatList,
 } from "react-native";
 import { supabase } from "../../lib/supabase";
 import { Colors, Fonts } from "../../constants/Styles";
@@ -437,6 +437,18 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
+        <Text style={styles.headerTitle}>Breadit</Text>
+      </Animated.View>
+
       {reviews.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateTitle}>No reviews yet</Text>
@@ -453,20 +465,34 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={reviews}
           renderItem={renderReviewCard}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingTop: 104 }]}
+          contentInsetAdjustmentBehavior="never"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#d97706"
+              tintColor={Colors.primary}
+              progressViewOffset={90}
             />
           }
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
         />
       )}
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push("/add-review")}
+      >
+        <Plus size={28} color="#fff" />
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.fab}
@@ -611,8 +637,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.semibold,
   },
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 60,
+    paddingBottom: 0,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.primaryLight,
+    zIndex: 10,
+  },
+  headerTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 24,
+    color: Colors.primary,
+    textAlign: "center",
+  },
   listContent: {
     padding: 16,
+    paddingTop: 120,
   },
   card: {
     backgroundColor: Colors.surface,

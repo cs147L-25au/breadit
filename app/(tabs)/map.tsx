@@ -8,8 +8,8 @@ import {
   View,
 } from "react-native";
 import MapView, { Region } from "react-native-maps";
-
 import * as Location from "expo-location";
+
 import {
   BakeryCard,
   BakeryDetailsModal,
@@ -17,6 +17,7 @@ import {
 } from "../../components/map";
 import { useBakeries } from "../../hooks/use-bakeries";
 import { BakeryWithReviews } from "../../lib/database.types";
+import { Fonts, Colors } from "../../constants/Styles";
 
 export default function MapScreen() {
   const { bakeries, loading, error, refetch } = useBakeries();
@@ -85,7 +86,7 @@ export default function MapScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#D97706" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Finding bakeries near you...</Text>
       </View>
     );
@@ -151,49 +152,50 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FDF6E9",
+    backgroundColor: Colors.primaryLight,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FDF6E9",
+    backgroundColor: Colors.primaryLight,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#78716C",
-    fontWeight: "500",
+    color: Colors.textLight,
+    fontFamily: Fonts.medium,
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FDF6E9",
+    backgroundColor: Colors.primaryLight,
     padding: 24,
   },
   errorText: {
     fontSize: 16,
-    color: "#DC2626",
+    color: Colors.error,
     textAlign: "center",
     marginBottom: 16,
+    fontFamily: Fonts.regular,
   },
   retryButton: {
-    backgroundColor: "#D97706",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
     color: "#fff",
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     fontSize: 16,
   },
   map: {
     flex: 1,
   },
   bakeryList: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
     paddingVertical: 16,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -206,8 +208,8 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#292524",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     marginBottom: 16,
     paddingHorizontal: 20,
   },

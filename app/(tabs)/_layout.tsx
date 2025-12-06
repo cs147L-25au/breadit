@@ -18,7 +18,7 @@ export default function TabLayout() {
           fontSize: 12,
         },
         headerStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: Colors.primaryLight,
         },
         headerShadowVisible: false,
       }}
@@ -26,13 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Feed",
-          headerTitle: "Breadit",
-          headerTitleStyle: {
-            color: Colors.primary,
-            fontSize: 24,
-            fontFamily: Fonts.bold,
-          },
+          headerShown: false,
           tabBarIcon: ({ color, size }) => <Camera size={size} color={color} />,
         }}
       />
@@ -43,7 +37,8 @@ export default function TabLayout() {
           headerTitle: "Bakery Map",
           headerTitleStyle: {
             fontFamily: Fonts.bold,
-            color: Colors.text,
+            color: Colors.primary,
+            marginBottom: 8,
           },
           tabBarIcon: ({ color, size }) => <MapPin size={size} color={color} />,
         }}
