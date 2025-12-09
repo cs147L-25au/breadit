@@ -308,24 +308,26 @@ export default function AddReviewScreen() {
 
       console.log("Review created successfully!");
 
+      // Clear form state
+      setImage(null);
+      setImageBase64(null);
+      setBakeryName("");
+      setBakeryAddress("");
+      setBakeryCoordinates(null);
+      setGooglePlaceId(null);
+      setBreadType("sourdough");
+      setRatingOverall(5);
+      setRatingCrust(5);
+      setRatingCrumb(5);
+      setRatingFlavor(5);
+      setReviewText("");
+
+      // Show success message and go back
       Alert.alert("Success!", "Your review has been posted", [
         {
           text: "OK",
           onPress: () => {
-            setImage(null);
-            setImageBase64(null);
-            setBakeryName("");
-            setBakeryAddress("");
-            setBakeryCoordinates(null);
-            setGooglePlaceId(null);
-            setBreadType("sourdough");
-            setRatingOverall(5);
-            setRatingCrust(5);
-            setRatingCrumb(5);
-            setRatingFlavor(5);
-            setReviewText("");
-
-            router.push("/(tabs)");
+            router.back(); // Changed from router.push("/(tabs)")
           },
         },
       ]);
