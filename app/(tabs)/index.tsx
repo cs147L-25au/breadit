@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Heart, MessageCircle, Plus, Send, Star, X } from "lucide-react-native";
+import { Plus, Send, X } from "lucide-react-native";
 import { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
@@ -16,35 +16,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  FlatList,
 } from "react-native";
 import { supabase } from "../../lib/supabase";
 import { Colors, Fonts } from "../../constants/Styles";
-
-interface Review {
-  id: string;
-  user_id: string;
-  bread_type: string;
-  rating_overall: number;
-  rating_crust: number | null;
-  rating_crumb: number | null;
-  rating_flavor: number | null;
-  review_text: string | null;
-  image_url: string;
-  created_at: string;
-  profiles: {
-    username: string;
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-  bakeries: {
-    name: string;
-    address: string;
-  };
-  likes_count: number;
-  comments_count: number;
-  user_has_liked: boolean;
-}
+import FeedCard, { Review } from "../../components/feed/FeedCard";
 
 interface Comment {
   id: string;
@@ -193,14 +168,12 @@ export default function FeedScreen() {
 
     try {
       if (currentlyLiked) {
-        // Unlike
         await supabase
           .from("likes")
           .delete()
           .eq("review_id", reviewId)
           .eq("user_id", currentUserId);
       } else {
-        // Like
         await supabase.from("likes").insert({
           review_id: reviewId,
           user_id: currentUserId,
@@ -259,8 +232,6 @@ export default function FeedScreen() {
         throw error;
       }
 
-      console.log("Comments data:", data); // Debug log
-
       const formattedComments = (data || []).map((comment) => ({
         ...comment,
         profiles: Array.isArray(comment.profiles)
@@ -291,10 +262,8 @@ export default function FeedScreen() {
 
       if (error) throw error;
 
-      // Reload comments
       await loadComments(selectedReviewId);
 
-      // Update comments count in reviews list
       setReviews(
         reviews.map((review) =>
           review.id === selectedReviewId
@@ -317,114 +286,19 @@ export default function FeedScreen() {
     loadReviews();
   }
 
-  const renderReviewCard = ({ item }: { item: Review }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.userInfo}>
-          {item.profiles?.avatar_url ? (
-            <Image
-              source={{ uri: item.profiles.avatar_url }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>
-                {item.profiles?.username?.[0]?.toUpperCase() || "?"}
-              </Text>
-            </View>
-          )}
-          <View style={styles.userTextInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {item.profiles?.full_name ||
-                item.profiles?.username ||
-                "Anonymous"}
-            </Text>
-            <Text style={styles.bakeryName} numberOfLines={1}>
-              {item.bakeries?.name}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.ratingBadge}>
-          <Star size={16} fill="#f59e0b" color="#f59e0b" />
-          <Text style={styles.ratingText}>
-            {item.rating_overall.toFixed(1)}
-          </Text>
-        </View>
-      </View>
-
-      <Image source={{ uri: item.image_url }} style={styles.breadImage} />
-
-      <View style={styles.cardContent}>
-        <View style={styles.breadTypeRow}>
-          <Text style={styles.breadType}>
-            {item.bread_type.charAt(0).toUpperCase() + item.bread_type.slice(1)}
-          </Text>
-        </View>
-
-        {(item.rating_crust || item.rating_crumb || item.rating_flavor) && (
-          <View style={styles.ratingsRow}>
-            {item.rating_crust && (
-              <View>
-                <Text style={styles.ratingLabel}>Crust</Text>
-                <Text style={styles.ratingValue}>
-                  {item.rating_crust.toFixed(1)}
-                </Text>
-              </View>
-            )}
-            {item.rating_crumb && (
-              <View>
-                <Text style={styles.ratingLabel}>Crumb</Text>
-                <Text style={styles.ratingValue}>
-                  {item.rating_crumb.toFixed(1)}
-                </Text>
-              </View>
-            )}
-            {item.rating_flavor && (
-              <View>
-                <Text style={styles.ratingLabel}>Flavor</Text>
-                <Text style={styles.ratingValue}>
-                  {item.rating_flavor.toFixed(1)}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {item.review_text && (
-          <Text style={styles.reviewText} numberOfLines={3}>
-            {item.review_text}
-          </Text>
-        )}
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleLike(item.id, item.user_has_liked)}
-          >
-            <Heart
-              size={20}
-              color={item.user_has_liked ? "#ef4444" : "#6b7280"}
-              fill={item.user_has_liked ? "#ef4444" : "transparent"}
-            />
-            <Text
-              style={[
-                styles.actionText,
-                item.user_has_liked && styles.actionTextLiked,
-              ]}
-            >
-              {item.likes_count}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => openCommentsModal(item.id)}
-          >
-            <MessageCircle size={20} color="#6b7280" />
-            <Text style={styles.actionText}>{item.comments_count}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+  const renderReviewCard = ({
+    item,
+    index,
+  }: {
+    item: Review;
+    index: number;
+  }) => (
+    <FeedCard
+      item={item}
+      index={index}
+      onLike={handleLike}
+      onComment={openCommentsModal}
+    />
   );
 
   if (loading) {
@@ -439,7 +313,7 @@ export default function FeedScreen() {
     <View style={styles.container}>
       <Animated.View
         style={[
-          styles.header,
+          styles.animatedHeader,
           {
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslateY }],
@@ -494,13 +368,6 @@ export default function FeedScreen() {
         <Plus size={28} color="#fff" />
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push("/add-review")}
-      >
-        <Plus size={28} color="#fff" />
-      </TouchableOpacity>
-
       {/* Comments Modal */}
       <Modal
         visible={commentsModalVisible}
@@ -521,7 +388,7 @@ export default function FeedScreen() {
 
           {loadingComments ? (
             <View style={styles.modalLoading}>
-              <ActivityIndicator size="large" color="#d97706" />
+              <ActivityIndicator size="large" color={Colors.primary} />
             </View>
           ) : (
             <ScrollView style={styles.commentsList}>
@@ -535,14 +402,29 @@ export default function FeedScreen() {
               ) : (
                 comments.map((comment) => (
                   <View key={comment.id} style={styles.commentItem}>
-                    <Image
-                      source={{
-                        uri:
-                          comment.profiles?.avatar_url ||
-                          "https://i.pravatar.cc/150?img=2",
-                      }}
-                      style={styles.commentAvatar}
-                    />
+                    {comment.profiles?.avatar_url ? (
+                      <Image
+                        source={{ uri: comment.profiles.avatar_url }}
+                        style={styles.commentAvatar}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.avatarPlaceholder,
+                          {
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            marginRight: 12,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.avatarInitial, { fontSize: 14 }]}>
+                          {comment.profiles?.username?.[0]?.toUpperCase() ||
+                            "?"}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.commentContent}>
                       <Text style={styles.commentUsername}>
                         {comment.profiles?.full_name ||
@@ -637,7 +519,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.semibold,
   },
-  header: {
+  animatedHeader: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -657,136 +539,6 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     paddingTop: 120,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    marginBottom: 16,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    overflow: "hidden",
-  },
-  cardHeader: {
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 12,
-  },
-  userTextInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarInitial: {
-    color: Colors.primary,
-    fontSize: 18,
-    fontFamily: Fonts.bold,
-  },
-  userName: {
-    fontFamily: Fonts.semibold,
-    fontSize: 16,
-    color: Colors.text,
-  },
-  bakeryName: {
-    color: Colors.textLight,
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    marginTop: 2,
-  },
-  ratingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontFamily: Fonts.semibold,
-    fontSize: 14,
-    color: Colors.primary,
-  },
-  breadImage: {
-    width: "100%",
-    height: 300,
-    backgroundColor: Colors.borderLight,
-  },
-  cardContent: {
-    padding: 16,
-  },
-  breadTypeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  breadType: {
-    fontFamily: Fonts.semibold,
-    fontSize: 16,
-    color: Colors.primary,
-  },
-  ratingsRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 12,
-  },
-  ratingLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.regular,
-    color: Colors.textLight,
-  },
-  ratingValue: {
-    fontFamily: Fonts.semibold,
-    fontSize: 14,
-    color: Colors.text,
-    marginTop: 2,
-  },
-  reviewText: {
-    color: Colors.text,
-    fontFamily: Fonts.regular,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  actions: {
-    flexDirection: "row",
-    marginTop: 4,
-    gap: 24,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionText: {
-    marginLeft: 6,
-    color: Colors.textLight,
-    fontFamily: Fonts.medium,
-    fontSize: 14,
-  },
-  actionTextLiked: {
-    color: Colors.error,
   },
   fab: {
     position: "absolute",
@@ -858,6 +610,15 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     marginRight: 12,
+  },
+  avatarPlaceholder: {
+    backgroundColor: Colors.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarInitial: {
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
   },
   commentContent: {
     flex: 1,
