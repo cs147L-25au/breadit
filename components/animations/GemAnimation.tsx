@@ -1,15 +1,14 @@
-import React, { useMemo, useEffect, useState } from "react";
-import { StyleSheet, View, Dimensions } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Animated, {
-  withTiming,
-  withDelay,
   Easing,
   useAnimatedStyle,
-  useSharedValue,
   useDerivedValue,
-  runOnJS,
+  useSharedValue,
+  withDelay,
+  withTiming
 } from "react-native-reanimated";
-import { Colors } from "../../constants/Styles";
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -130,36 +129,10 @@ const BezierGem: React.FC<BezierGemProps> = ({
   );
 };
 
-// Gem icon component - a diamond/gem shape
-const GemIcon: React.FC<{ size?: number; color?: string }> = ({
-  size = 24,
-  color = "#FFD700",
-}) => {
+// Bread emoji icon component
+const BreadIcon: React.FC<{ size?: number }> = ({ size = 24 }) => {
   return (
-    <View style={[styles.gem, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.gemTop,
-          {
-            borderBottomWidth: size * 0.35,
-            borderLeftWidth: size / 2,
-            borderRightWidth: size / 2,
-            borderBottomColor: color,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.gemBottom,
-          {
-            borderTopWidth: size * 0.65,
-            borderLeftWidth: size / 2,
-            borderRightWidth: size / 2,
-            borderTopColor: color,
-          },
-        ]}
-      />
-    </View>
+    <Text style={{ fontSize: size, lineHeight: size * 1.2 }}>🍞</Text>
   );
 };
 
@@ -181,9 +154,9 @@ export const GemAnimation: React.FC<GemAnimationProps> = ({
 }) => {
   const [completedCount, setCompletedCount] = useState(0);
 
-  // Generate gem configurations with varying bulge, delay, and duration
-  const gems = useMemo(() => {
-    const gemConfigs = [];
+  // Generate bread configurations with varying bulge, delay, and duration
+  const breads = useMemo(() => {
+    const breadConfigs = [];
     for (let i = 0; i < gemCount; i++) {
       // Vary the bulge between -150 and 150 to create spread effect
       const bulge = (Math.random() - 0.5) * 300;
@@ -191,15 +164,12 @@ export const GemAnimation: React.FC<GemAnimationProps> = ({
       const delay = Math.random() * 400;
       // Vary duration between 800 and 1400ms
       const duration = 800 + Math.random() * 600;
-      // Random size variation
-      const size = 16 + Math.random() * 12;
-      // Gold color variations
-      const colors = ["#FFD700", "#FFC107", "#FFAB00", "#FF8F00", "#FFE082"];
-      const color = colors[Math.floor(Math.random() * colors.length)];
+      // Random size variation for bread emoji
+      const size = 18 + Math.random() * 10;
 
-      gemConfigs.push({ bulge, delay, duration, size, color, id: i });
+      breadConfigs.push({ bulge, delay, duration, size, id: i });
     }
-    return gemConfigs;
+    return breadConfigs;
   }, [gemCount]);
 
   // Handle completion callback in useEffect to avoid calling during render
@@ -219,17 +189,17 @@ export const GemAnimation: React.FC<GemAnimationProps> = ({
 
   return (
     <View style={styles.container} pointerEvents="none">
-      {gems.map((gem) => (
+      {breads.map((bread) => (
         <BezierGem
-          key={gem.id}
+          key={bread.id}
           from={fromPosition}
           to={toPosition}
-          bulge={gem.bulge}
-          delay={gem.delay}
-          duration={gem.duration}
+          bulge={bread.bulge}
+          delay={bread.delay}
+          duration={bread.duration}
           onComplete={handleGemComplete}
         >
-          <GemIcon size={gem.size} color={gem.color} />
+          <BreadIcon size={bread.size} />
         </BezierGem>
       ))}
     </View>
@@ -275,7 +245,7 @@ export const PointsDisplay: React.FC<PointsDisplayProps> = ({
       style={[styles.pointsContainer, animatedStyle]}
       onLayout={handleLayout}
     >
-      <GemIcon size={18} color="#FFD700" />
+      <BreadIcon size={16} />
       <Animated.Text style={styles.pointsText}>{points}</Animated.Text>
     </Animated.View>
   );
@@ -291,41 +261,21 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
   },
-  gem: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gemTop: {
-    width: 0,
-    height: 0,
-    backgroundColor: "transparent",
-    borderStyle: "solid",
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
-  gemBottom: {
-    width: 0,
-    height: 0,
-    backgroundColor: "transparent",
-    borderStyle: "solid",
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
   pointsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 215, 0, 0.15)",
+    backgroundColor: "#fef7ed",
+    borderWidth: 1,
+    borderColor: "#f59e0b",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 215, 0, 0.3)",
     gap: 6,
   },
   pointsText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#B8860B",
+    color: "#f59e0b",
     letterSpacing: 0.5,
   },
 });

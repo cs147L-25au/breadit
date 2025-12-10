@@ -615,7 +615,7 @@ export default function FeedScreen() {
           {/* Points indicator in modal */}
           <View style={styles.modalPointsHint}>
             <Text style={styles.modalPointsHintText}>
-              💎 Earn {POINTS.COMMENT} points for commenting on others' posts!
+              🍞 Earn {POINTS.COMMENT} points for commenting on others' posts!
             </Text>
           </View>
         </KeyboardAvoidingView>
