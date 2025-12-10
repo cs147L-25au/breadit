@@ -1,20 +1,20 @@
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  Alert,
   ActivityIndicator,
+  Alert,
   Image,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
+import { Colors, Fonts } from "../../constants/Styles";
 import { supabase } from "../../lib/supabase";
-import { Fonts, Colors } from "../../constants/Styles";
 
 export default function SignupScreen() {
   const [email, setEmail] = useState("");
@@ -74,8 +74,8 @@ export default function SignupScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Join the bread community today</Text>
+          <Text style={styles.title}>Breadit</Text>
+          <Text style={styles.subtitle}>Welcome to the bread community</Text>
         </View>
 
         <View style={styles.form}>
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontFamily: Fonts.bold,
-    color: Colors.text,
+    color: Colors.primary,
     marginBottom: 8,
     textAlign: "center",
   },
@@ -221,6 +221,6 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 15,
     fontFamily: Fonts.semibold,
-    color: Colors.secondary,
+    color: Colors.primary,
   },
 });

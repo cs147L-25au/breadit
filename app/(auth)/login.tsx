@@ -50,9 +50,9 @@ export default function LoginScreen() {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.title}>Welcome back!</Text>
+        <Text style={styles.title}>Breadit</Text>
         <Text style={styles.subtitle}>
-          Sign in to continue your bread journey
+          Welcome back, bread-lover
         </Text>
       </View>
 
@@ -91,7 +91,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>New here? </Text>
           <Link href="/(auth)/signup" asChild>
             <TouchableOpacity>
               <Text style={styles.linkText}>Sign up</Text>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontFamily: Fonts.bold,
-    color: Colors.text,
+    color: Colors.primary,
     marginBottom: 8,
     textAlign: "center",
   },
@@ -185,6 +185,6 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 15,
     fontFamily: Fonts.semibold,
-    color: Colors.secondary,
+    color: Colors.primary,
   },
 });
