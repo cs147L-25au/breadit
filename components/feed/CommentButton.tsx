@@ -1,4 +1,5 @@
 import { MessageCircle } from "lucide-react-native";
+import React, { memo } from "react";
 import { Text, TouchableOpacity, StyleSheet } from "react-native";
 import Reanimated, {
   useAnimatedStyle,
@@ -13,7 +14,7 @@ interface CommentButtonProps {
   onPress: () => void;
 }
 
-export default function CommentButton({
+function CommentButton({
   commentsCount,
   onPress,
 }: CommentButtonProps) {
@@ -40,6 +41,8 @@ export default function CommentButton({
     </TouchableOpacity>
   );
 }
+
+export default memo(CommentButton);
 
 const styles = StyleSheet.create({
   actionButton: {

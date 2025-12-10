@@ -1,10 +1,11 @@
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { Star, X } from "lucide-react-native";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -17,8 +18,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { supabase } from "../lib/supabase";
+import {
+  GemAnimation,
+  PointsDisplay,
+} from "../components/animations/GemAnimation";
 import { Colors, Fonts } from "../constants/Styles";
+import { supabase } from "../lib/supabase";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Points configuration
+const POINTS = {
+  POST_REVIEW: 10,
+};
 
 const BREAD_TYPES = [
   "sourdough",
@@ -45,6 +57,12 @@ interface BakeryResult {
   google_place_id: string;
 }
 
+interface GemAnimationState {
+  visible: boolean;
+  fromPosition: { x: number; y: number };
+  pointsAwarded: number;
+}
+
 export default function AddReviewScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -64,6 +82,19 @@ export default function AddReviewScreen() {
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Points and animation state
+  const [userPoints, setUserPoints] = useState(0);
+  const [pointsDisplayPosition, setPointsDisplayPosition] = useState({
+    x: SCREEN_WIDTH - 60,
+    y: 70,
+  });
+  const [gemAnimation, setGemAnimation] = useState<GemAnimationState>({
+    visible: false,
+    fromPosition: { x: 0, y: 0 },
+    pointsAwarded: 0,
+  });
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+
   // Bakery search state
   const [showBakerySearch, setShowBakerySearch] = useState(false);
   const [bakerySearchQuery, setBakerySearchQuery] = useState("");
@@ -75,6 +106,95 @@ export default function AddReviewScreen() {
   const [showManualBakery, setShowManualBakery] = useState(false);
   const [manualBakeryName, setManualBakeryName] = useState("");
   const [manualBakeryAddress, setManualBakeryAddress] = useState("");
+
+  // Load user points on mount
+  useEffect(() => {
+    loadUserPoints();
+  }, []);
+
+  async function loadUserPoints() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("points")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setUserPoints(profile.points || 0);
+      }
+    }
+  }
+
+  // Award points function
+  async function awardPoints(
+    points: number,
+    fromPosition: { x: number; y: number }
+  ): Promise<boolean> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return false;
+
+    try {
+      // Update points in database
+      const { error } = await supabase.rpc("increment_user_points", {
+        user_id_input: user.id,
+        points_to_add: points,
+      });
+
+      // If RPC doesn't exist, fall back to direct update
+      if (error) {
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("points")
+          .eq("id", user.id)
+          .single();
+
+        const currentPoints = currentProfile?.points || 0;
+
+        await supabase
+          .from("profiles")
+          .update({ points: currentPoints + points })
+          .eq("id", user.id);
+      }
+
+      // Trigger gem animation
+      setGemAnimation({
+        visible: true,
+        fromPosition,
+        pointsAwarded: points,
+      });
+
+      // Update local state
+      setUserPoints((prev) => prev + points);
+
+      return true;
+    } catch (err) {
+      console.error("Error awarding points:", err);
+      return false;
+    }
+  }
+
+  function handleGemAnimationComplete() {
+    setGemAnimation((prev) => ({ ...prev, visible: false }));
+
+    // Navigate back after animation completes
+    if (showSuccessAnimation) {
+      setTimeout(() => {
+        router.back();
+      }, 500);
+    }
+  }
+
+  function handlePointsDisplayLayout(position: { x: number; y: number }) {
+    setPointsDisplayPosition(position);
+  }
 
   async function searchBakeries(query: string) {
     if (!query.trim() || query.length < 3) {
@@ -257,9 +377,7 @@ export default function AddReviewScreen() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      console.log("Uploading image...");
       const imageUrl = await uploadImage(imageBase64);
-      console.log("Image uploaded:", imageUrl);
 
       const { data: existingBakery } = await supabase
         .from("bakeries")
@@ -271,9 +389,7 @@ export default function AddReviewScreen() {
 
       if (existingBakery) {
         bakeryId = existingBakery.id;
-        console.log("Using existing bakery:", bakeryId);
       } else {
-        console.log("Creating new bakery...");
         const { data: newBakery, error: bakeryError } = await supabase
           .from("bakeries")
           .insert({
@@ -288,10 +404,8 @@ export default function AddReviewScreen() {
 
         if (bakeryError) throw bakeryError;
         bakeryId = newBakery.id;
-        console.log("Bakery created:", bakeryId);
       }
 
-      console.log("Creating review...");
       const { error: reviewError } = await supabase.from("reviews").insert({
         user_id: user.id,
         bakery_id: bakeryId,
@@ -305,9 +419,6 @@ export default function AddReviewScreen() {
       });
 
       if (reviewError) throw reviewError;
-
-      console.log("Review created successfully!");
-
       // Clear form state
       setImage(null);
       setImageBase64(null);
@@ -322,15 +433,33 @@ export default function AddReviewScreen() {
       setRatingFlavor(5);
       setReviewText("");
 
-      // Show success message and go back
-      Alert.alert("Success!", "Your review has been posted", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.back(); // Changed from router.push("/(tabs)")
+      // Award points for posting a review with gem animation
+      setShowSuccessAnimation(true);
+      
+      // Position from the submit button area
+      const fromPosition = {
+        x: SCREEN_WIDTH / 2,
+        y: SCREEN_HEIGHT - 150,
+      };
+
+      await awardPoints(POINTS.POST_REVIEW, fromPosition);
+
+      // Show success message
+      Alert.alert(
+        "🎉 Review Posted!",
+        `You earned ${POINTS.POST_REVIEW} points for sharing your bread review!`,
+        [
+          {
+            text: "Awesome!",
+            onPress: () => {
+              // Navigation handled by animation complete if still showing
+              if (!gemAnimation.visible) {
+                router.back();
+              }
+            },
           },
-        },
-      ]);
+        ]
+      );
     } catch (error) {
       console.error("Error submitting review:", error);
       Alert.alert("Error", "Failed to submit review. Please try again.");
@@ -365,6 +494,20 @@ export default function AddReviewScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
+      {/* Points Display Header */}
+      <View style={styles.pointsHeader}>
+        <View style={styles.pointsHeaderContent}>
+          <Text style={styles.pointsHeaderTitle}>Add Review</Text>
+          <PointsDisplay
+            points={userPoints}
+            onLayout={handlePointsDisplayLayout}
+          />
+        </View>
+        <Text style={styles.pointsHint}>
+          🍞 Earn {POINTS.POST_REVIEW} points for posting!
+        </Text>
+      </View>
+
       <ScrollView style={styles.scrollView}>
         {/* Image Picker */}
         <View style={styles.section}>
@@ -710,6 +853,17 @@ export default function AddReviewScreen() {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Gem Animation Overlay */}
+      {gemAnimation.visible && (
+        <GemAnimation
+          fromPosition={gemAnimation.fromPosition}
+          toPosition={pointsDisplayPosition}
+          gemCount={8}
+          pointsAwarded={gemAnimation.pointsAwarded}
+          onAnimationComplete={handleGemAnimationComplete}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -718,6 +872,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  pointsHeader: {
+    paddingTop: 60,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: Colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  pointsHeaderContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pointsHeaderTitle: {
+    fontSize: 20,
+    fontFamily: Fonts.bold,
+    color: Colors.text,
+  },
+  pointsHint: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
+    marginTop: 8,
   },
   scrollView: {
     flex: 1,

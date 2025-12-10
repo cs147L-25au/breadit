@@ -1,13 +1,14 @@
-import { Bookmark, MapPin } from "lucide-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { Bookmark, MapPin, Trash2 } from "lucide-react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { formatDate, SavedPlace } from "./types";
 import { Fonts, Colors } from "../../constants/Styles";
 
 interface SavedPlaceCardProps {
   place: SavedPlace;
+  onDelete?: (savedId: number) => void;
 }
 
-export function SavedPlaceCard({ place }: SavedPlaceCardProps) {
+export function SavedPlaceCard({ place, onDelete }: SavedPlaceCardProps) {
   return (
     <View style={styles.savedCard}>
       <View style={styles.savedIconContainer}>
@@ -24,7 +25,17 @@ export function SavedPlaceCard({ place }: SavedPlaceCardProps) {
           Saved {formatDate(place.created_at)}
         </Text>
       </View>
-      <Bookmark size={20} fill={Colors.primary} color={Colors.primary} />
+      {onDelete ? (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => onDelete(place.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Trash2 size={18} color={Colors.error} />
+        </TouchableOpacity>
+      ) : (
+        <Bookmark size={20} fill={Colors.primary} color={Colors.primary} />
+      )}
     </View>
   );
 }
@@ -43,6 +54,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   savedIconContainer: {
     width: 48,

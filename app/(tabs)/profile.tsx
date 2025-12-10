@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -22,9 +23,9 @@ import {
   type UserProfile,
   type UserReview,
 } from "../../components/profile";
+import { Colors } from "../../constants/Styles";
 import { BreadType } from "../../lib/database.types";
 import { supabase } from "../../lib/supabase";
-import { Fonts, Colors } from "../../constants/Styles";
 
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabType>("reviews");
@@ -45,6 +46,91 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  async function handleLogout() {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.auth.signOut();
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleDeleteReview(reviewId: string) {
+    Alert.alert(
+      'Delete Review',
+      'Are you sure you want to delete this review? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('reviews')
+                .delete()
+                .eq('id', reviewId);
+
+              if (error) {
+                Alert.alert('Error', 'Failed to delete review. Please try again.');
+                console.error('Error deleting review:', error);
+                return;
+              }
+
+              // Update local state
+              setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+            } catch (error) {
+              console.error('Error deleting review:', error);
+              Alert.alert('Error', 'Failed to delete review. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleDeleteSavedPlace(savedId: number) {
+    Alert.alert(
+      'Remove Saved Place',
+      'Are you sure you want to remove this bakery from your saved places?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('saved')
+                .delete()
+                .eq('id', savedId);
+
+              if (error) {
+                Alert.alert('Error', 'Failed to remove saved place. Please try again.');
+                console.error('Error deleting saved place:', error);
+                return;
+              }
+
+              // Update local state
+              setSavedPlaces((prev) => prev.filter((p) => p.id !== savedId));
+            } catch (error) {
+              console.error('Error deleting saved place:', error);
+              Alert.alert('Error', 'Failed to remove saved place. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function onRefresh() {
     setRefreshing(true);
@@ -97,7 +183,11 @@ export default function ProfileScreen() {
         .order("created_at", { ascending: false });
 
       if (reviewsData) {
-        setReviews(reviewsData as UserReview[]);
+        const formattedReviews = reviewsData.map((review) => ({
+          ...review,
+          bakeries: Array.isArray(review.bakeries) ? review.bakeries[0] : review.bakeries,
+        }));
+        setReviews(formattedReviews as UserReview[]);
       }
 
       // Load saved places
@@ -198,6 +288,7 @@ export default function ProfileScreen() {
         avgRating={avgRating}
         uniqueBakeries={uniqueBakeries}
         savedCount={savedPlaces.length}
+        onLogout={handleLogout}
       />
 
       <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -224,7 +315,9 @@ export default function ProfileScreen() {
           ) : (
             <FlatList
               data={filteredReviews}
-              renderItem={({ item }) => <ReviewCard review={item} />}
+              renderItem={({ item }) => (
+                <ReviewCard review={item} onDelete={handleDeleteReview} />
+              )}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
@@ -252,7 +345,9 @@ export default function ProfileScreen() {
           ) : (
             <FlatList
               data={savedPlaces}
-              renderItem={({ item }) => <SavedPlaceCard place={item} />}
+              renderItem={({ item }) => (
+                <SavedPlaceCard place={item} onDelete={handleDeleteSavedPlace} />
+              )}
               keyExtractor={(item) => item.id.toString()}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
