@@ -1,23 +1,142 @@
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
+  Dimensions,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { BreaditText } from "../../components/BreaditText";
 import { Colors, Fonts } from "../../constants/Styles";
 import { supabase } from "../../lib/supabase";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Animation configuration
+const INITIAL_LOGO_SIZE = 160;
+const FINAL_LOGO_SIZE = 100;
+const TITLE_INITIAL_WIDTH = 220;
+const TITLE_FINAL_WIDTH = 160;
+
+// Calculate offset to center content during intro
+// Header area: paddingTop(80) + marginTop(22) + logo + marginBottom(32)
+const HEADER_TOP_OFFSET = 80 + 22 + 50; // Approximate center of header area
+const CENTER_Y = SCREEN_HEIGHT / 2 - 120; // Center of screen minus half content height
+const TRANSLATE_OFFSET = CENTER_Y - HEADER_TOP_OFFSET;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [introComplete, setIntroComplete] = useState(false);
   const router = useRouter();
+
+  // Animation shared values
+  const translateY = useSharedValue(TRANSLATE_OFFSET);
+  const introFadeUp = useSharedValue(30); // Start 30px below for fade-up effect
+  const contentOpacity = useSharedValue(0);
+  const logoScale = useSharedValue(0.8);
+  const logoSize = useSharedValue(INITIAL_LOGO_SIZE);
+  const titleWidth = useSharedValue(TITLE_INITIAL_WIDTH);
+  const formOpacity = useSharedValue(0);
+  const subtitleOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    // Phase 1: Fade in centered with fade-up effect (0-400ms)
+    contentOpacity.value = withTiming(1, {
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+    });
+
+    introFadeUp.value = withTiming(0, {
+      duration: 500,
+      easing: Easing.out(Easing.cubic),
+    });
+
+    logoScale.value = withSpring(1, {
+      damping: 12,
+      stiffness: 100,
+    });
+
+    // Phase 2: Gentle logo bounce (500-2600ms)
+    logoScale.value = withDelay(
+      500,
+      withRepeat(
+        withSequence(
+          withTiming(1.04, { duration: 400, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0.98, { duration: 350, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: 300, easing: Easing.out(Easing.sin) })
+        ),
+        1,
+        false
+      )
+    );
+
+    // Phase 3: Move to final header position (2700ms+)
+    const moveDelay = 2700;
+
+    translateY.value = withDelay(
+      moveDelay,
+      withTiming(0, {
+        duration: 600,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+      })
+    );
+
+    logoSize.value = withDelay(
+      moveDelay,
+      withTiming(FINAL_LOGO_SIZE, {
+        duration: 600,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+      })
+    );
+
+    titleWidth.value = withDelay(
+      moveDelay,
+      withTiming(TITLE_FINAL_WIDTH, {
+        duration: 600,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+      })
+    );
+
+    // Phase 4: Fade in subtitle and form
+    subtitleOpacity.value = withDelay(
+      moveDelay + 300,
+      withTiming(1, {
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+
+    formOpacity.value = withDelay(
+      moveDelay + 400,
+      withTiming(1, {
+        duration: 500,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+
+    // Mark intro as complete
+    const timeout = setTimeout(() => {
+      setIntroComplete(true);
+    }, moveDelay + 900);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -40,23 +159,58 @@ export default function LoginScreen() {
     }
   }
 
+  const logoContainerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value + introFadeUp.value },
+      { scale: logoScale.value },
+    ],
+    opacity: contentOpacity.value,
+  }));
+
+  const logoImageStyle = useAnimatedStyle(() => ({
+    width: logoSize.value,
+    height: logoSize.value,
+  }));
+
+  const titleContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value + introFadeUp.value }],
+    opacity: contentOpacity.value,
+  }));
+
+  const titleSvgStyle = useAnimatedStyle(() => ({
+    width: titleWidth.value,
+    alignItems: "center",
+  }));
+
+  const subtitleStyle = useAnimatedStyle(() => ({
+    opacity: subtitleOpacity.value,
+  }));
+
+  const formStyle = useAnimatedStyle(() => ({
+    opacity: formOpacity.value,
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Image
+        <Animated.View style={[styles.logoContainer, logoContainerStyle]}>
+          <Animated.Image
             source={require("../../assets/breadit-logo.png")}
-            style={styles.logo}
+            style={[styles.logo, logoImageStyle]}
             resizeMode="contain"
           />
-        </View>
-        <Text style={styles.title}>Welcome back!</Text>
-        <Text style={styles.subtitle}>
-          Sign in to continue your bread journey
-        </Text>
+        </Animated.View>
+        <Animated.View style={[styles.titleContainer, titleContainerStyle]}>
+          <Animated.View style={titleSvgStyle}>
+            <BreaditText width={TITLE_FINAL_WIDTH} color={Colors.primary} />
+          </Animated.View>
+        </Animated.View>
+        <Animated.Text style={[styles.subtitle, subtitleStyle]}>
+          Welcome back, bread-lover
+        </Animated.Text>
       </View>
 
-      <View style={styles.form}>
+      <Animated.View style={[styles.form, formStyle]}>
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -66,19 +220,8 @@ export default function LoginScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
+          editable={introComplete}
         />
-      <Text style={styles.logo}>🍞</Text>
-      <Text style={styles.title}>Welcome to Breadit</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        placeholderTextColor="#a9a9a9"
-      />
 
         <TextInput
           style={styles.input}
@@ -88,20 +231,13 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="password"
+          editable={introComplete}
         />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholderTextColor="#a9a9a9"
-      />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
-          disabled={loading}
+          disabled={loading || !introComplete}
         >
           {loading ? (
             <ActivityIndicator color={Colors.surface} />
@@ -111,14 +247,14 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>New here? </Text>
           <Link href="/(auth)/signup" asChild>
-            <TouchableOpacity>
+            <TouchableOpacity disabled={!introComplete}>
               <Text style={styles.linkText}>Sign up</Text>
             </TouchableOpacity>
           </Link>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -132,22 +268,25 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingHorizontal: 32,
     paddingBottom: 40,
+    alignItems: "center",
   },
   logoContainer: {
     alignItems: "center",
     marginTop: 22,
     marginBottom: 32,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: FINAL_LOGO_SIZE,
+    height: FINAL_LOGO_SIZE,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: Fonts.bold,
-    color: Colors.text,
+  titleContainer: {
+    alignItems: "center",
     marginBottom: 8,
-    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
@@ -169,7 +308,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.text,
-    backgroundColor: "#f3f4f6",
   },
   button: {
     backgroundColor: Colors.primary,
@@ -206,6 +344,6 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 15,
     fontFamily: Fonts.semibold,
-    color: Colors.secondary,
+    color: Colors.primary,
   },
 });
