@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { BreaditText } from "../../components/BreaditText";
 import { Colors, Fonts } from "../../constants/Styles";
 import { supabase } from "../../lib/supabase";
 
@@ -74,7 +75,9 @@ export default function SignupScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Breadit</Text>
+          <View style={styles.titleContainer}>
+            <BreaditText width={160} color={Colors.primary} />
+          </View>
           <Text style={styles.subtitle}>Welcome to the bread community</Text>
         </View>
 
@@ -158,12 +161,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: Fonts.bold,
-    color: Colors.primary,
+  titleContainer: {
+    alignItems: "center",
     marginBottom: 8,
-    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,

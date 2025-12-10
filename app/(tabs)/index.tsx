@@ -22,6 +22,7 @@ import {
   GemAnimation,
   PointsDisplay,
 } from "../../components/animations/GemAnimation";
+import { BreaditText } from "../../components/BreaditText";
 import FeedCard, { Review } from "../../components/feed/FeedCard";
 import { Colors, Fonts } from "../../constants/Styles";
 import { supabase } from "../../lib/supabase";
@@ -448,7 +449,7 @@ export default function FeedScreen() {
         ]}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Breadit</Text>
+          <BreaditText width={100} color={Colors.primary} />
           <PointsDisplay
             points={userPoints}
             onLayout={handlePointsDisplayLayout}

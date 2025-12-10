@@ -20,6 +20,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { BreaditText } from "../../components/BreaditText";
 import { Colors, Fonts } from "../../constants/Styles";
 import { supabase } from "../../lib/supabase";
 
@@ -28,8 +29,8 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 // Animation configuration
 const INITIAL_LOGO_SIZE = 160;
 const FINAL_LOGO_SIZE = 100;
-const TITLE_INITIAL_SIZE = 48;
-const TITLE_FINAL_SIZE = 32;
+const TITLE_INITIAL_WIDTH = 220;
+const TITLE_FINAL_WIDTH = 160;
 
 // Calculate offset to center content during intro
 // Header area: paddingTop(80) + marginTop(22) + logo + marginBottom(32)
@@ -46,17 +47,23 @@ export default function LoginScreen() {
 
   // Animation shared values
   const translateY = useSharedValue(TRANSLATE_OFFSET);
+  const introFadeUp = useSharedValue(30); // Start 30px below for fade-up effect
   const contentOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.8);
   const logoSize = useSharedValue(INITIAL_LOGO_SIZE);
-  const titleSize = useSharedValue(TITLE_INITIAL_SIZE);
+  const titleWidth = useSharedValue(TITLE_INITIAL_WIDTH);
   const formOpacity = useSharedValue(0);
   const subtitleOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // Phase 1: Fade in centered (0-400ms)
+    // Phase 1: Fade in centered with fade-up effect (0-400ms)
     contentOpacity.value = withTiming(1, {
       duration: 400,
+      easing: Easing.out(Easing.cubic),
+    });
+
+    introFadeUp.value = withTiming(0, {
+      duration: 500,
       easing: Easing.out(Easing.cubic),
     });
 
@@ -98,9 +105,9 @@ export default function LoginScreen() {
       })
     );
 
-    titleSize.value = withDelay(
+    titleWidth.value = withDelay(
       moveDelay,
-      withTiming(TITLE_FINAL_SIZE, {
+      withTiming(TITLE_FINAL_WIDTH, {
         duration: 600,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
       })
@@ -154,7 +161,7 @@ export default function LoginScreen() {
 
   const logoContainerStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateY: translateY.value },
+      { translateY: translateY.value + introFadeUp.value },
       { scale: logoScale.value },
     ],
     opacity: contentOpacity.value,
@@ -166,12 +173,13 @@ export default function LoginScreen() {
   }));
 
   const titleContainerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value + introFadeUp.value }],
     opacity: contentOpacity.value,
   }));
 
-  const titleTextStyle = useAnimatedStyle(() => ({
-    fontSize: titleSize.value,
+  const titleSvgStyle = useAnimatedStyle(() => ({
+    width: titleWidth.value,
+    alignItems: "center",
   }));
 
   const subtitleStyle = useAnimatedStyle(() => ({
@@ -192,10 +200,10 @@ export default function LoginScreen() {
             resizeMode="contain"
           />
         </Animated.View>
-        <Animated.View style={titleContainerStyle}>
-          <Animated.Text style={[styles.title, titleTextStyle]}>
-            Breadit
-          </Animated.Text>
+        <Animated.View style={[styles.titleContainer, titleContainerStyle]}>
+          <Animated.View style={titleSvgStyle}>
+            <BreaditText width={TITLE_FINAL_WIDTH} color={Colors.primary} />
+          </Animated.View>
         </Animated.View>
         <Animated.Text style={[styles.subtitle, subtitleStyle]}>
           Welcome back, bread-lover
@@ -276,12 +284,9 @@ const styles = StyleSheet.create({
     width: FINAL_LOGO_SIZE,
     height: FINAL_LOGO_SIZE,
   },
-  title: {
-    fontSize: TITLE_FINAL_SIZE,
-    fontFamily: Fonts.bold,
-    color: Colors.primary,
+  titleContainer: {
+    alignItems: "center",
     marginBottom: 8,
-    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
