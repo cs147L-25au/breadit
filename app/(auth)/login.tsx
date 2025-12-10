@@ -67,18 +67,6 @@ export default function LoginScreen() {
           keyboardType="email-address"
           autoComplete="email"
         />
-      <Text style={styles.logo}>🍞</Text>
-      <Text style={styles.title}>Welcome to Breadit</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        placeholderTextColor="#a9a9a9"
-      />
 
         <TextInput
           style={styles.input}
@@ -89,14 +77,6 @@ export default function LoginScreen() {
           secureTextEntry
           autoComplete="password"
         />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholderTextColor="#a9a9a9"
-      />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -169,7 +149,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.text,
-    backgroundColor: "#f3f4f6",
   },
   button: {
     backgroundColor: Colors.primary,
