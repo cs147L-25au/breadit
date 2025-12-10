@@ -1,6 +1,7 @@
-import { Star } from 'lucide-react-native';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { formatBreadType, formatDate, UserReview } from './types';
+import { Star } from "lucide-react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { formatBreadType, formatDate, UserReview } from "./types";
+import { Fonts, Colors } from "../../constants/Styles";
 
 interface ReviewCardProps {
   review: UserReview;
@@ -19,16 +20,20 @@ export function ReviewCard({ review }: ReviewCardProps) {
       <View style={styles.reviewContent}>
         <View style={styles.reviewHeader}>
           <Text style={styles.reviewBakery} numberOfLines={1}>
-            {review.bakeries?.name || 'Unknown Bakery'}
+            {review.bakeries?.name || "Unknown Bakery"}
           </Text>
           <View style={styles.ratingBadge}>
-            <Star size={14} fill="#f59e0b" color="#f59e0b" />
-            <Text style={styles.ratingBadgeText}>{review.rating_overall.toFixed(1)}</Text>
+            <Star size={14} fill={Colors.warning} color={Colors.warning} />
+            <Text style={styles.ratingBadgeText}>
+              {review.rating_overall.toFixed(1)}
+            </Text>
           </View>
         </View>
-        
-        <Text style={styles.breadTypeBadge}>{formatBreadType(review.bread_type)}</Text>
-        
+
+        <Text style={styles.breadTypeBadge}>
+          {formatBreadType(review.bread_type)}
+        </Text>
+
         <View style={styles.subRatings}>
           <View style={styles.subRatingItem}>
             <Text style={styles.subRatingLabel}>Crust</Text>
@@ -49,7 +54,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
             {review.review_text}
           </Text>
         )}
-        
+
         <Text style={styles.reviewDate}>{formatDate(review.created_at)}</Text>
       </View>
     </View>
@@ -58,25 +63,25 @@ export function ReviewCard({ review }: ReviewCardProps) {
 
 const styles = StyleSheet.create({
   reviewCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
   },
   reviewImage: {
-    width: '100%',
+    width: "100%",
     height: 180,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: Colors.borderLight,
   },
   placeholderImage: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fef3c7',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.primaryLight,
   },
   placeholderText: {
     fontSize: 48,
@@ -85,72 +90,73 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 6,
   },
   reviewBakery: {
-    fontWeight: '600',
+    fontFamily: Fonts.semibold,
     fontSize: 16,
-    color: '#1f2937',
+    color: Colors.text,
     flex: 1,
     marginRight: 8,
   },
   ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef3c7',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     gap: 4,
   },
   ratingBadgeText: {
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     fontSize: 14,
-    color: '#b45309',
+    color: Colors.warning,
   },
   breadTypeBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff7ed',
-    color: '#c2410c',
+    alignSelf: "flex-start",
+    backgroundColor: Colors.primaryLight,
+    color: Colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     fontSize: 12,
-    fontWeight: '600',
-    overflow: 'hidden',
+    fontFamily: Fonts.semibold,
+    overflow: "hidden",
     marginBottom: 10,
   },
   subRatings: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     marginBottom: 8,
   },
   subRatingItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   subRatingLabel: {
     fontSize: 11,
-    color: '#9ca3af',
-    fontWeight: '500',
+    color: Colors.textLighter,
+    fontFamily: Fonts.medium,
   },
   subRatingValue: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     marginTop: 2,
   },
   reviewText: {
     fontSize: 13,
-    color: '#6b7280',
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
     lineHeight: 18,
     marginBottom: 6,
   },
   reviewDate: {
     fontSize: 11,
-    color: '#9ca3af',
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
   },
 });
-

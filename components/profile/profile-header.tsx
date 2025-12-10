@@ -1,6 +1,7 @@
-import { LogOut } from 'lucide-react-native';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { UserProfile } from './types';
+import { LogOut } from "lucide-react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Colors, Fonts } from "../../constants/Styles";
+import { UserProfile } from "./types";
 
 interface ProfileHeaderProps {
   profile: UserProfile | null;
@@ -32,18 +33,18 @@ export function ProfileHeader({
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarInitial}>
-              {profile?.username?.[0]?.toUpperCase() || '?'}
+              {profile?.username?.[0]?.toUpperCase() || "?"}
             </Text>
           </View>
         )}
         <View style={styles.profileInfo}>
           <Text style={styles.name}>
-            {profile?.full_name || profile?.username || 'Bread Lover'}
+            {profile?.full_name || profile?.username || "Bread Lover"}
           </Text>
-          <Text style={styles.bio}>@{profile?.username || 'anonymous'}</Text>
+          <Text style={styles.bio}>@{profile?.username || "anonymous"}</Text>
         </View>
       </View>
-      
+
       <View style={styles.stats}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{reviewCount}</Text>
@@ -68,13 +69,13 @@ export function ProfileHeader({
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -89,8 +90,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   avatar: {
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 36,
     borderWidth: 3,
-    borderColor: '#fed7aa',
+    borderColor: Colors.primaryLight,
   },
   profileInfo: {
     marginLeft: 16,
@@ -106,45 +107,45 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1f2937',
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     letterSpacing: -0.3,
   },
   bio: {
-    color: '#9ca3af',
+    color: Colors.textLighter,
     marginTop: 2,
     fontSize: 14,
+    fontFamily: Fonts.regular,
   },
   stats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1f2937',
+    fontFamily: Fonts.semibold,
+    color: Colors.text,
   },
   statLabel: {
-    color: '#9ca3af',
+    color: Colors.textLighter,
     fontSize: 12,
     marginTop: 2,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
   },
   avatarPlaceholder: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#D97706',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatarInitial: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
   },
 });
-

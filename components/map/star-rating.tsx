@@ -1,5 +1,6 @@
-import { Star } from 'lucide-react-native';
-import { View } from 'react-native';
+import { Star } from "lucide-react-native";
+import { View } from "react-native";
+import { Colors } from "../../constants/Styles";
 
 interface StarRatingProps {
   rating: number;
@@ -7,7 +8,11 @@ interface StarRatingProps {
   color?: string;
 }
 
-export function StarRating({ rating, size = 16, color = '#D97706' }: StarRatingProps) {
+export function StarRating({
+  rating,
+  size = 16,
+  color = Colors.primary,
+}: StarRatingProps) {
   const stars = [];
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating - fullStars >= 0.5;
@@ -17,9 +22,15 @@ export function StarRating({ rating, size = 16, color = '#D97706' }: StarRatingP
       stars.push(<Star key={i} size={size} fill={color} color={color} />);
     } else if (i === fullStars && hasHalfStar) {
       stars.push(
-        <View key={i} style={{ position: 'relative' }}>
+        <View key={i} style={{ position: "relative" }}>
           <Star size={size} color={color} />
-          <View style={{ position: 'absolute', overflow: 'hidden', width: size / 2 }}>
+          <View
+            style={{
+              position: "absolute",
+              overflow: "hidden",
+              width: size / 2,
+            }}
+          >
             <Star size={size} fill={color} color={color} />
           </View>
         </View>
@@ -29,10 +40,5 @@ export function StarRating({ rating, size = 16, color = '#D97706' }: StarRatingP
     }
   }
 
-  return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {stars}
-    </View>
-  );
+  return <View style={{ flexDirection: "row", gap: 2 }}>{stars}</View>;
 }
-

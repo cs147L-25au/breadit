@@ -1,10 +1,10 @@
 import { router } from "expo-router";
-import { Heart, MessageCircle, Plus, Send, Star, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { Plus, Send, X } from "lucide-react-native";
+import { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -18,31 +18,8 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../../lib/supabase";
-
-interface Review {
-  id: string;
-  user_id: string;
-  bread_type: string;
-  rating_overall: number;
-  rating_crust: number | null;
-  rating_crumb: number | null;
-  rating_flavor: number | null;
-  review_text: string | null;
-  image_url: string;
-  created_at: string;
-  profiles: {
-    username: string;
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-  bakeries: {
-    name: string;
-    address: string;
-  };
-  likes_count: number;
-  comments_count: number;
-  user_has_liked: boolean;
-}
+import { Colors, Fonts } from "../../constants/Styles";
+import FeedCard, { Review } from "../../components/feed/FeedCard";
 
 interface Comment {
   id: string;
@@ -68,6 +45,20 @@ export default function FeedScreen() {
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, -50],
+    extrapolate: "clamp",
+  });
 
   useEffect(() => {
     getCurrentUser();
@@ -146,8 +137,12 @@ export default function FeedScreen() {
 
           return {
             ...review,
-            profiles: Array.isArray(review.profiles) ? review.profiles[0] : review.profiles,
-            bakeries: Array.isArray(review.bakeries) ? review.bakeries[0] : review.bakeries,
+            profiles: Array.isArray(review.profiles)
+              ? review.profiles[0]
+              : review.profiles,
+            bakeries: Array.isArray(review.bakeries)
+              ? review.bakeries[0]
+              : review.bakeries,
             likes_count: likesCount || 0,
             comments_count: commentsCount || 0,
             user_has_liked: userHasLiked,
@@ -173,14 +168,12 @@ export default function FeedScreen() {
 
     try {
       if (currentlyLiked) {
-        // Unlike
         await supabase
           .from("likes")
           .delete()
           .eq("review_id", reviewId)
           .eq("user_id", currentUserId);
       } else {
-        // Like
         await supabase.from("likes").insert({
           review_id: reviewId,
           user_id: currentUserId,
@@ -220,24 +213,33 @@ export default function FeedScreen() {
         .from("comments")
         .select(
           `
-          id,
-          comment_text,
-          created_at,
-          profiles (
-            username,
-            full_name,
-            avatar_url
-          )
-        `
+        id,
+        comment_text,
+        created_at,
+        user_id,
+        profiles!comments_user_id_fkey (
+          username,
+          full_name,
+          avatar_url
+        )
+      `
         )
         .eq("review_id", reviewId)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
-      setComments(data?.map((comment) => ({
+      if (error) {
+        console.error("Error fetching comments:", error);
+        throw error;
+      }
+
+      const formattedComments = (data || []).map((comment) => ({
         ...comment,
-        profiles: comment.profiles[0],
-      })) || []);
+        profiles: Array.isArray(comment.profiles)
+          ? comment.profiles[0]
+          : comment.profiles,
+      }));
+
+      setComments(formattedComments);
     } catch (error) {
       console.error("Error loading comments:", error);
       Alert.alert("Error", "Failed to load comments");
@@ -260,10 +262,8 @@ export default function FeedScreen() {
 
       if (error) throw error;
 
-      // Reload comments
       await loadComments(selectedReviewId);
 
-      // Update comments count in reviews list
       setReviews(
         reviews.map((review) =>
           review.id === selectedReviewId
@@ -286,121 +286,43 @@ export default function FeedScreen() {
     loadReviews();
   }
 
-  const renderReviewCard = ({ item }: { item: Review }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.userInfo}>
-        {item.profiles?.avatar_url ? (
-          <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarInitial}>
-              {item.profiles?.username?.[0]?.toUpperCase() || '?'}
-            </Text>
-          </View>
-        )}
-          <View>
-            <Text style={styles.userName}>
-              {item.profiles?.full_name ||
-                item.profiles?.username ||
-                "Anonymous"}
-            </Text>
-            <Text style={styles.bakeryName}>{item.bakeries?.name}</Text>
-          </View>
-        </View>
-        <View style={styles.ratingBadge}>
-          <Star size={16} fill="#f59e0b" color="#f59e0b" />
-          <Text style={styles.ratingText}>
-            {item.rating_overall.toFixed(1)}
-          </Text>
-        </View>
-      </View>
-
-      <Image source={{ uri: item.image_url }} style={styles.breadImage} />
-
-      <View style={styles.cardContent}>
-        <View style={styles.breadTypeRow}>
-          <Text style={styles.breadType}>
-            {item.bread_type.charAt(0).toUpperCase() + item.bread_type.slice(1)}
-          </Text>
-        </View>
-
-        {(item.rating_crust || item.rating_crumb || item.rating_flavor) && (
-          <View style={styles.ratingsRow}>
-            {item.rating_crust && (
-              <View>
-                <Text style={styles.ratingLabel}>Crust</Text>
-                <Text style={styles.ratingValue}>
-                  {item.rating_crust.toFixed(1)}
-                </Text>
-              </View>
-            )}
-            {item.rating_crumb && (
-              <View>
-                <Text style={styles.ratingLabel}>Crumb</Text>
-                <Text style={styles.ratingValue}>
-                  {item.rating_crumb.toFixed(1)}
-                </Text>
-              </View>
-            )}
-            {item.rating_flavor && (
-              <View>
-                <Text style={styles.ratingLabel}>Flavor</Text>
-                <Text style={styles.ratingValue}>
-                  {item.rating_flavor.toFixed(1)}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {item.review_text && (
-          <Text style={styles.reviewText} numberOfLines={3}>
-            {item.review_text}
-          </Text>
-        )}
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleLike(item.id, item.user_has_liked)}
-          >
-            <Heart
-              size={20}
-              color={item.user_has_liked ? "#ef4444" : "#6b7280"}
-              fill={item.user_has_liked ? "#ef4444" : "transparent"}
-            />
-            <Text
-              style={[
-                styles.actionText,
-                item.user_has_liked && styles.actionTextLiked,
-              ]}
-            >
-              {item.likes_count}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => openCommentsModal(item.id)}
-          >
-            <MessageCircle size={20} color="#6b7280" />
-            <Text style={styles.actionText}>{item.comments_count}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+  const renderReviewCard = ({
+    item,
+    index,
+  }: {
+    item: Review;
+    index: number;
+  }) => (
+    <FeedCard
+      item={item}
+      index={index}
+      onLike={handleLike}
+      onComment={openCommentsModal}
+    />
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#d97706" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.animatedHeader,
+          {
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
+        <Text style={styles.headerTitle}>Breadit</Text>
+      </Animated.View>
+
       {reviews.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateTitle}>No reviews yet</Text>
@@ -417,18 +339,25 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={reviews}
           renderItem={renderReviewCard}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingTop: 104 }]}
+          contentInsetAdjustmentBehavior="never"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#d97706"
+              tintColor={Colors.primary}
+              progressViewOffset={90}
             />
           }
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
         />
       )}
 
@@ -459,7 +388,7 @@ export default function FeedScreen() {
 
           {loadingComments ? (
             <View style={styles.modalLoading}>
-              <ActivityIndicator size="large" color="#d97706" />
+              <ActivityIndicator size="large" color={Colors.primary} />
             </View>
           ) : (
             <ScrollView style={styles.commentsList}>
@@ -473,14 +402,29 @@ export default function FeedScreen() {
               ) : (
                 comments.map((comment) => (
                   <View key={comment.id} style={styles.commentItem}>
-                    <Image
-                      source={{
-                        uri:
-                          comment.profiles?.avatar_url ||
-                          "https://i.pravatar.cc/150?img=2",
-                      }}
-                      style={styles.commentAvatar}
-                    />
+                    {comment.profiles?.avatar_url ? (
+                      <Image
+                        source={{ uri: comment.profiles.avatar_url }}
+                        style={styles.commentAvatar}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.avatarPlaceholder,
+                          {
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            marginRight: 12,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.avatarInitial, { fontSize: 14 }]}>
+                          {comment.profiles?.username?.[0]?.toUpperCase() ||
+                            "?"}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.commentContent}>
                       <Text style={styles.commentUsername}>
                         {comment.profiles?.full_name ||
@@ -501,6 +445,7 @@ export default function FeedScreen() {
             <TextInput
               style={styles.commentInput}
               placeholder="Add a comment..."
+              placeholderTextColor={Colors.textLight}
               value={newComment}
               onChangeText={setNewComment}
               multiline
@@ -531,13 +476,13 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: Colors.primaryLight,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f9fafb",
+    backgroundColor: Colors.primaryLight,
   },
   emptyState: {
     flex: 1,
@@ -547,127 +492,53 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#374151",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 16,
-    color: "#6b7280",
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
     textAlign: "center",
     marginBottom: 24,
   },
   emptyStateButton: {
-    backgroundColor: "#d97706",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emptyStateButtonText: {
-    color: "#fff",
+    color: Colors.surface,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
+  },
+  animatedHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 60,
+    paddingBottom: 0,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.primaryLight,
+    zIndex: 10,
+  },
+  headerTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 24,
+    color: Colors.primary,
+    textAlign: "center",
   },
   listContent: {
     padding: 16,
-  },
-  card: {
-    backgroundColor: "#fff",
-    marginBottom: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardHeader: {
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  userName: {
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  bakeryName: {
-    color: "#6b7280",
-    fontSize: 14,
-    marginTop: 2,
-  },
-  ratingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  breadImage: {
-    width: "100%",
-    height: 300,
-    backgroundColor: "#e5e7eb",
-  },
-  cardContent: {
-    padding: 16,
-  },
-  breadTypeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  breadType: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: "#d97706",
-  },
-  ratingsRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 12,
-  },
-  ratingLabel: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-  ratingValue: {
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  reviewText: {
-    color: "#374151",
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  actions: {
-    flexDirection: "row",
-    marginTop: 4,
-    gap: 24,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionText: {
-    marginLeft: 6,
-    color: "#6b7280",
-    fontWeight: "600",
-  },
-  actionTextLiked: {
-    color: "#ef4444",
+    paddingTop: 120,
   },
   fab: {
     position: "absolute",
@@ -676,19 +547,19 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#d97706",
+    backgroundColor: Colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: 12,
     elevation: 8,
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
   },
   modalHeader: {
     flexDirection: "row",
@@ -696,12 +567,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: Colors.border,
     paddingTop: 60,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: Fonts.bold,
+    color: Colors.text,
   },
   modalLoading: {
     flex: 1,
@@ -720,13 +592,14 @@ const styles = StyleSheet.create({
   },
   noCommentsText: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#6b7280",
+    fontFamily: Fonts.semibold,
+    color: Colors.textLight,
     marginBottom: 8,
   },
   noCommentsSubtext: {
     fontSize: 14,
-    color: "#9ca3af",
+    fontFamily: Fonts.regular,
+    color: Colors.textLighter,
   },
   commentItem: {
     flexDirection: "row",
@@ -738,41 +611,55 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginRight: 12,
   },
+  avatarPlaceholder: {
+    backgroundColor: Colors.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarInitial: {
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
+  },
   commentContent: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: Colors.background,
     padding: 12,
     borderRadius: 12,
   },
   commentUsername: {
-    fontWeight: "600",
+    fontFamily: Fonts.semibold,
     fontSize: 14,
+    color: Colors.text,
     marginBottom: 4,
   },
   commentText: {
     fontSize: 14,
-    color: "#374151",
+    fontFamily: Fonts.regular,
+    color: Colors.text,
     lineHeight: 20,
   },
   commentInputContainer: {
     flexDirection: "row",
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: Colors.border,
     alignItems: "flex-end",
+    backgroundColor: Colors.surface,
   },
   commentInput: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: Colors.background,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginRight: 8,
     maxHeight: 100,
     fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.text,
   },
   sendButton: {
-    backgroundColor: "#d97706",
+    backgroundColor: Colors.primary,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -781,19 +668,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 36,
-    backgroundColor: '#D97706',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarInitial: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
   },
 });
