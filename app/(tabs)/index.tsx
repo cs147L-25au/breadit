@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { Plus, Send, X } from "lucide-react-native";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -17,9 +18,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { supabase } from "../../lib/supabase";
-import { Colors, Fonts } from "../../constants/Styles";
+import {
+  GemAnimation,
+  PointsDisplay,
+} from "../../components/animations/GemAnimation";
 import FeedCard, { Review } from "../../components/feed/FeedCard";
+import { Colors, Fonts } from "../../constants/Styles";
+import { supabase } from "../../lib/supabase";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+// Points configuration
+const POINTS = {
+  POST_REVIEW: 10,
+  COMMENT: 5,
+};
 
 interface Comment {
   id: string;
@@ -32,11 +45,31 @@ interface Comment {
   };
 }
 
+interface GemAnimationState {
+  visible: boolean;
+  fromPosition: { x: number; y: number };
+  pointsAwarded: number;
+}
+
 export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
+
+  // Points display position for animation target
+  const [pointsDisplayPosition, setPointsDisplayPosition] = useState({
+    x: SCREEN_WIDTH - 60,
+    y: 70,
+  });
+
+  // Gem animation state
+  const [gemAnimation, setGemAnimation] = useState<GemAnimationState>({
+    visible: false,
+    fromPosition: { x: 0, y: 0 },
+    pointsAwarded: 0,
+  });
 
   // Comments modal state
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
@@ -45,6 +78,11 @@ export default function FeedScreen() {
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  // Comment button position ref for animation
+  const commentButtonPositionRef = useRef<{ x: number; y: number } | null>(
+    null
+  );
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -70,7 +108,74 @@ export default function FeedScreen() {
       data: { user },
     } = await supabase.auth.getUser();
     setCurrentUserId(user?.id || null);
+
+    if (user) {
+      // Load user's points
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("points")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setUserPoints(profile.points || 0);
+      }
+    }
   }
+
+  // Function to award points and trigger gem animation
+  const awardPoints = useCallback(
+    async (
+      points: number,
+      fromPosition: { x: number; y: number }
+    ): Promise<boolean> => {
+      if (!currentUserId) return false;
+
+      try {
+        // Update points in database
+        const { error } = await supabase.rpc("increment_user_points", {
+          user_id_input: currentUserId,
+          points_to_add: points,
+        });
+
+        // If RPC doesn't exist, fall back to direct update
+        if (error) {
+          const { data: currentProfile } = await supabase
+            .from("profiles")
+            .select("points")
+            .eq("id", currentUserId)
+            .single();
+
+          const currentPoints = currentProfile?.points || 0;
+
+          await supabase
+            .from("profiles")
+            .update({ points: currentPoints + points })
+            .eq("id", currentUserId);
+        }
+
+        // Trigger gem animation
+        setGemAnimation({
+          visible: true,
+          fromPosition,
+          pointsAwarded: points,
+        });
+
+        // Update local state after animation starts
+        setUserPoints((prev) => prev + points);
+
+        return true;
+      } catch (err) {
+        console.error("Error awarding points:", err);
+        return false;
+      }
+    },
+    [currentUserId]
+  );
+
+  const handleGemAnimationComplete = useCallback(() => {
+    setGemAnimation((prev) => ({ ...prev, visible: false }));
+  }, []);
 
   async function loadReviews() {
     try {
@@ -252,6 +357,10 @@ export default function FeedScreen() {
     if (!newComment.trim()) return;
     if (!currentUserId || !selectedReviewId) return;
 
+    // Find the review to check if commenting on own post
+    const review = reviews.find((r) => r.id === selectedReviewId);
+    const isOwnPost = review?.user_id === currentUserId;
+
     setSubmittingComment(true);
     try {
       const { error } = await supabase.from("comments").insert({
@@ -273,6 +382,16 @@ export default function FeedScreen() {
       );
 
       setNewComment("");
+
+      // Award points for commenting on other people's posts
+      if (!isOwnPost) {
+        // Use a position near the send button for the animation
+        const fromPosition = {
+          x: SCREEN_WIDTH - 60,
+          y: Dimensions.get("window").height - 100,
+        };
+        await awardPoints(POINTS.COMMENT, fromPosition);
+      }
     } catch (error) {
       console.error("Error submitting comment:", error);
       Alert.alert("Error", "Failed to post comment");
@@ -283,8 +402,16 @@ export default function FeedScreen() {
 
   function onRefresh() {
     setRefreshing(true);
+    getCurrentUser(); // Refresh points too
     loadReviews();
   }
+
+  const handlePointsDisplayLayout = useCallback(
+    (position: { x: number; y: number }) => {
+      setPointsDisplayPosition(position);
+    },
+    []
+  );
 
   const renderReviewCard = ({
     item,
@@ -320,7 +447,13 @@ export default function FeedScreen() {
           },
         ]}
       >
-        <Text style={styles.headerTitle}>Breadit</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Breadit</Text>
+          <PointsDisplay
+            points={userPoints}
+            onLayout={handlePointsDisplayLayout}
+          />
+        </View>
       </Animated.View>
 
       {reviews.length === 0 ? (
@@ -367,6 +500,17 @@ export default function FeedScreen() {
       >
         <Plus size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* Gem Animation Overlay */}
+      {gemAnimation.visible && (
+        <GemAnimation
+          fromPosition={gemAnimation.fromPosition}
+          toPosition={pointsDisplayPosition}
+          gemCount={6}
+          pointsAwarded={gemAnimation.pointsAwarded}
+          onAnimationComplete={handleGemAnimationComplete}
+        />
+      )}
 
       {/* Comments Modal */}
       <Modal
@@ -467,6 +611,13 @@ export default function FeedScreen() {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Points indicator in modal */}
+          <View style={styles.modalPointsHint}>
+            <Text style={styles.modalPointsHintText}>
+              💎 Earn {POINTS.COMMENT} points for commenting on others' posts!
+            </Text>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -530,11 +681,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     zIndex: 10,
   },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   headerTitle: {
     fontFamily: Fonts.bold,
     fontSize: 24,
     color: Colors.primary,
-    textAlign: "center",
   },
   listContent: {
     padding: 16,
@@ -668,5 +823,16 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  modalPointsHint: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: Colors.surface,
+  },
+  modalPointsHintText: {
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
+    textAlign: "center",
   },
 });

@@ -1,10 +1,10 @@
 import { Star } from "lucide-react-native";
-import { useEffect } from "react";
+import React, { memo, useCallback } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import Reanimated, { FadeInDown } from "react-native-reanimated";
-import { Colors, Fonts } from "../../constants/Styles";
-import LikeButton from "../../components/feed/LikeButton";
 import CommentButton from "../../components/feed/CommentButton";
+import LikeButton from "../../components/feed/LikeButton";
+import { Colors, Fonts } from "../../constants/Styles";
 
 export interface Review {
   id: string;
@@ -33,7 +33,7 @@ export interface Review {
 
 interface FeedCardProps {
   item: Review;
-  index: number; // Add this
+  index: number;
   onLike: (reviewId: string, currentlyLiked: boolean) => void;
   onComment: (reviewId: string) => void;
 }
@@ -45,12 +45,21 @@ function formatBreadType(type: string): string {
     .join(" ");
 }
 
-export default function FeedCard({
+function FeedCard({
   item,
   index,
   onLike,
   onComment,
 }: FeedCardProps) {
+  // Memoize callbacks to prevent unnecessary re-renders of child components
+  const handleLike = useCallback(() => {
+    onLike(item.id, item.user_has_liked);
+  }, [item.id, item.user_has_liked, onLike]);
+
+  const handleComment = useCallback(() => {
+    onComment(item.id);
+  }, [item.id, onComment]);
+
   return (
     <Reanimated.View
       entering={FadeInDown.delay(index * 100).springify()}
@@ -137,17 +146,30 @@ export default function FeedCard({
           <LikeButton
             isLiked={item.user_has_liked}
             likesCount={item.likes_count}
-            onPress={() => onLike(item.id, item.user_has_liked)}
+            onPress={handleLike}
           />
           <CommentButton
             commentsCount={item.comments_count}
-            onPress={() => onComment(item.id)}
+            onPress={handleComment}
           />
         </View>
       </View>
     </Reanimated.View>
   );
 }
+
+// Custom comparison function for memo - only re-render if relevant data changes
+function arePropsEqual(prevProps: FeedCardProps, nextProps: FeedCardProps) {
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.likes_count === nextProps.item.likes_count &&
+    prevProps.item.comments_count === nextProps.item.comments_count &&
+    prevProps.item.user_has_liked === nextProps.item.user_has_liked &&
+    prevProps.index === nextProps.index
+  );
+}
+
+export default memo(FeedCard, arePropsEqual);
 
 const styles = StyleSheet.create({
   card: {

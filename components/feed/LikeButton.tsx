@@ -1,4 +1,5 @@
 import { Heart } from "lucide-react-native";
+import React, { memo } from "react";
 import { Text, TouchableOpacity, StyleSheet } from "react-native";
 import Reanimated, {
   useAnimatedStyle,
@@ -14,7 +15,7 @@ interface LikeButtonProps {
   onPress: () => void;
 }
 
-export default function LikeButton({
+function LikeButton({
   isLiked,
   likesCount,
   onPress,
@@ -48,6 +49,8 @@ export default function LikeButton({
     </TouchableOpacity>
   );
 }
+
+export default memo(LikeButton);
 
 const styles = StyleSheet.create({
   actionButton: {
