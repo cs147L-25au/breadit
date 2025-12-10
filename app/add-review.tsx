@@ -504,7 +504,7 @@ export default function AddReviewScreen() {
           />
         </View>
         <Text style={styles.pointsHint}>
-          💎 Earn {POINTS.POST_REVIEW} points for posting!
+          🍞 Earn {POINTS.POST_REVIEW} points for posting!
         </Text>
       </View>
 

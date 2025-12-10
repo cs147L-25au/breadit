@@ -1,15 +1,25 @@
-import { Star } from "lucide-react-native";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Star, Trash2 } from "lucide-react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Colors, Fonts } from "../../constants/Styles";
 import { formatBreadType, formatDate, UserReview } from "./types";
-import { Fonts, Colors } from "../../constants/Styles";
 
 interface ReviewCardProps {
   review: UserReview;
+  onDelete?: (reviewId: string) => void;
 }
 
-export function ReviewCard({ review }: ReviewCardProps) {
+export function ReviewCard({ review, onDelete }: ReviewCardProps) {
   return (
     <View style={styles.reviewCard}>
+      {onDelete && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => onDelete(review.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Trash2 size={18} color={Colors.error} />
+        </TouchableOpacity>
+      )}
       {review.image_url ? (
         <Image source={{ uri: review.image_url }} style={styles.reviewImage} />
       ) : (
@@ -71,6 +81,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
+    elevation: 3,
+    position: "relative",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
     elevation: 3,
   },
   reviewImage: {
